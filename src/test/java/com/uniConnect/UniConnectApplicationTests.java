@@ -1,4 +1,4 @@
-package com.uni_connect;
+package com.uniConnect;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
