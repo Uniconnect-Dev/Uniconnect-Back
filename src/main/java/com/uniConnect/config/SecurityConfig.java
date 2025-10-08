@@ -1,6 +1,6 @@
 package com.uniConnect.config;
 
-import com.uniConnect.users.security.JwtAuthFilter;
+import com.uniConnect.member.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +23,9 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain security(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+//                .csrf(csrf -> csrf
+//                .ignoringRequestMatchers("/auth/**") // 로그인/회원가입은 CSRF 검사 제외
+//                )
                 .cors(cors -> {}) // CorsConfig의 bean 사용
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth

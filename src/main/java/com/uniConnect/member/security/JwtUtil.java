@@ -1,4 +1,4 @@
-package com.uniConnect.users.security;
+package com.uniConnect.member.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;

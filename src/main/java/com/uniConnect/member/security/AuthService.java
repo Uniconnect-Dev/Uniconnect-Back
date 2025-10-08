@@ -1,8 +1,10 @@
-package com.uniConnect.users.security;
+package com.uniConnect.member.security;
 
-import com.uniConnect.repository.UsersRepository;
-import com.uniConnect.users.Users;
-import com.uniConnect.users.security.dto.*;
+import com.uniConnect.member.security.dto.LoginRequest;
+import com.uniConnect.member.security.dto.LoginResponse;
+import com.uniConnect.member.security.dto.SignupRequest;
+import com.uniConnect.member.repository.UsersRepository;
+import com.uniConnect.member.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -47,10 +49,9 @@ public class AuthService {
         usersRepository.findByUsername(request.username())
                 .ifPresent(u -> { throw new IllegalStateException("이미 존재하는 사용자입니다."); });
 
-        Users user = Users.builder()
+        User user = User.builder()
                 .username(request.username())
                 .password(passwordEncoder.encode(request.password()))
-                .name(request.name())
                 .build();
 
         usersRepository.save(user);

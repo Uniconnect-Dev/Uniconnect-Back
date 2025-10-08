@@ -1,6 +1,6 @@
-package com.uniConnect.users.security;
+package com.uniConnect.member.security;
 
-import com.uniConnect.users.security.dto.*;
+import com.uniConnect.member.security.dto.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

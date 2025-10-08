@@ -1,7 +1,7 @@
-package com.uniConnect.users.security;
+package com.uniConnect.member.security;
 
-import com.uniConnect.repository.UsersRepository;
-import com.uniConnect.users.Users;
+import com.uniConnect.member.repository.UsersRepository;
+import com.uniConnect.member.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
@@ -16,9 +16,9 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Users u = usersRepository.findByUsername(username)
+        User u = usersRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        return new CustomUser(u.getUsersId(), u.getUsername(), u.getPassword(),
+        return new CustomUser(u.getUserId(), u.getUsername(), u.getPassword(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER")));
     }
 }

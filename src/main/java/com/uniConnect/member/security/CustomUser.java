@@ -1,4 +1,4 @@
-package com.uniConnect.users.security;
+package com.uniConnect.member.security;
 
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;

@@ -1,4 +1,4 @@
-package com.uniConnect.users.security.dto;
+package com.uniConnect.member.security.dto;
 
 public record LoginResponse(String token) {
 }

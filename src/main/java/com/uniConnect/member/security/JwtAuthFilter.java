@@ -1,4 +1,4 @@
-package com.uniConnect.users.security;
+package com.uniConnect.member.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
