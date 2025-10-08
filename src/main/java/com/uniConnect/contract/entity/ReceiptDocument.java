@@ -1,6 +1,6 @@
 package com.uniConnect.contract.entity;
 
-import com.uniconnect.campaign.entity.MatchingRequest;
+import com.uniConnect.campaign.entity.MatchingRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;

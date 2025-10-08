@@ -1,7 +1,7 @@
 package com.uniConnect.member.entity;
 
-import com.uniconnect.member.enums.UserRole;
-import com.uniconnect.member.enums.UserStatus;
+import com.uniConnect.member.enums.UserRole;
+import com.uniConnect.member.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
