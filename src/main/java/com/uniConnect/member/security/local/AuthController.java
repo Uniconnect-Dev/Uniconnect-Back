@@ -6,8 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import static com.uniConnect.member.security.local.AuthService.deleteCookie;
-
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -23,12 +21,5 @@ public class AuthController {
     public ResponseEntity<String> signup(@RequestBody LocalSignupReq request) {
         authService.signup(request);
         return ResponseEntity.ok("회원가입 성공");
-    }
-
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse res) {
-        deleteCookie(res, "ACCESS_TOKEN");
-        deleteCookie(res, "REFRESH_TOKEN");
-        return ResponseEntity.noContent().build();
     }
 }

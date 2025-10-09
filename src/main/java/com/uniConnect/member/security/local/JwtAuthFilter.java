@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.*;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -13,6 +14,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -68,36 +70,36 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
 
-
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
 
         try {
-            // 1) 토큰 추출: 헤더 > 쿠키(ACCESS_TOKEN)
-            String token = resolveToken(req);
-
+            String token = resolveToken(req); // 헤더 > 쿠키(ACCESS_TOKEN)
             if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                String username = jwtUtil.extractUsername(token);
 
-                if (username != null) {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
-                    if (jwtUtil.isValid(token, userDetails.getUsername())) {
-                        UsernamePasswordAuthenticationToken auth =
-                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
-
-                        SecurityContext context = SecurityContextHolder.createEmptyContext();
-                        context.setAuthentication(auth);
-                        SecurityContextHolder.setContext(context);
+                // 1) 서명/만료 검증 (예외 나면 캐치됨)
+                if (jwtUtil.isValid(token)) { // 서명/만료만 체크하는 메서드
+                    // 2) principal: username(이메일) 우선, 없으면 subject
+                    String principal = jwtUtil.extractClaim(token, "username");
+                    if (principal == null || principal.isBlank()) {
+                        principal = jwtUtil.extractSubject(token); // sub
                     }
-                    // 유효하지 않으면 그냥 익명으로 통과
+
+                    // 3) 권한도 토큰에서 읽기 (예: "role" 클레임)
+                    String role = jwtUtil.extractClaim(token, "role"); // 예: "StudentOrg"
+                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+
+                    // 4) DB 조회 없이 인증객체 생성
+                    var auth = new UsernamePasswordAuthenticationToken(principal, null, authorities);
+                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+
+                    var context = SecurityContextHolder.createEmptyContext();
+                    context.setAuthentication(auth);
+                    SecurityContextHolder.setContext(context);
                 }
             }
-        } catch (Exception ignored) {
-            // 절대 여기서 401/에러 응답 쓰지 말 것. 다음 필터로 넘김.
-        }
+        } catch (Exception ignored) { /* 절대 여기서 401 쓰지 말 것 */ }
 
         chain.doFilter(req, res);
     }

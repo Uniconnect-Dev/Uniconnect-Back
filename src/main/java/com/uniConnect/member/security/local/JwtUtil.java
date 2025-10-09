@@ -64,15 +64,40 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    public String extractUsername(String token) {
+    public String extractSubject(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    //추출할 col
+    public String extractClaim(String token, String name) {
+        Object v = parseClaims(token).get(name);
+        return v == null ? null : String.valueOf(v);
+    }
+
+    public String extractUsername(String token) {
+        String username = extractClaim(token, "username");
+        return (username != null && !username.isBlank()) ? username : extractSubject(token);
+    }
+
+    public boolean isValid(String token) {
+        try {
+            Claims c = parseClaims(token);
+            Date exp = c.getExpiration();
+            return exp == null || exp.after(new Date());
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
     }
 
     public boolean isValid(String token, String expectedUsername) {
         try {
             Claims c = parseClaims(token);
-            return expectedUsername.equals(c.getSubject()) &&
-                    c.getExpiration().after(new Date());
+            return expectedUsername.equals(
+                    (extractClaim(token, "username") != null && !extractClaim(token, "username").isBlank())
+                            ? extractClaim(token, "username")
+                            : c.getSubject()
+            )
+                    && c.getExpiration().after(new Date());
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }

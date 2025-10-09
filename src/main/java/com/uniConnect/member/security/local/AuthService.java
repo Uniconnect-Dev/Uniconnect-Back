@@ -1,8 +1,6 @@
 package com.uniConnect.member.security.local;
 
 import com.uniConnect.member.entity.LocalCredential;
-import com.uniConnect.member.enums.UserRole;
-import com.uniConnect.member.enums.UserStatus;
 import com.uniConnect.member.repository.LocalCredentialRepository;
 import com.uniConnect.member.security.local.dto.LocalLoginReq;
 import com.uniConnect.member.security.local.dto.LocalLoginResp;
@@ -14,7 +12,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -82,17 +79,6 @@ public class AuthService {
                 .build();
         localCredentialRepository.save(cred);
 
-
-
-    }
-
-    public static void deleteCookie(HttpServletResponse res, String name) {
-        Cookie c = new Cookie(name, "");
-        c.setPath("/");          // ✅ 생성시와 동일해야 함
-        c.setHttpOnly(true);     // 생성시와 동일
-        c.setMaxAge(0);          // 삭제
-        // c.setSecure(false);   // 로컬 http이면 false, https면 true (생성시와 동일)
-        res.addCookie(c);
     }
 
 }
