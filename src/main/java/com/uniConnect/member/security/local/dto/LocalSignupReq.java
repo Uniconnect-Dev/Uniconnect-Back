@@ -1,6 +1,7 @@
 package com.uniConnect.member.security.local.dto;
 
 import com.uniConnect.member.enums.UserRole;
+import com.uniConnect.member.enums.UserStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -17,5 +18,8 @@ public record LocalSignupReq(
         String password,            // 평문 입력(서비스에서 BCrypt 해시)
 
         @NotBlank
-        UserRole userrole
+        UserRole userrole,
+
+        @NotBlank
+        UserStatus userStatus
 ) {}

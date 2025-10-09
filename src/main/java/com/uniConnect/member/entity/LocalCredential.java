@@ -1,7 +1,9 @@
 package com.uniConnect.member.entity;
 
 import jakarta.persistence.*;
+import lombok.*;
 
+@Data @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
 @Table(name = "local_credentials",
         uniqueConstraints = @UniqueConstraint(columnNames = {"loginId"}))
