@@ -9,8 +9,10 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -64,4 +66,8 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {return true;} // 계정 활성화됨
+
+    //없어도됨
+    @OneToMany(mappedBy="user") private List<OAuthAccount> oauthAccounts = new ArrayList<>();
+    @OneToOne(mappedBy="user") private LocalCredential localCredential;
 }

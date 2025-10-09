@@ -1,4 +1,4 @@
-package com.uniConnect.member.security;
+package com.uniConnect.member.security.local;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
 
@@ -22,7 +21,7 @@ public class JwtUtil {
 
     public JwtUtil(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration}") long expirationMillis
+            @Value("${jwt.access-expiration}") long expirationMillis
     ) {
         if (secret == null || secret.isBlank()) {
             throw new IllegalArgumentException("jwt.secret is empty or missing");

@@ -1,0 +1,104 @@
+package com.uniConnect.member.security.local;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.*;
+import org.springframework.security.core.userdetails.*;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+
+@Component
+@RequiredArgsConstructor
+public class JwtAuthFilter extends OncePerRequestFilter {
+
+    private final JwtUtil jwtUtil;
+    private final UserDetailsService userDetailsService;
+
+    // 화이트리스트(필터 건너뛰기)
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
+    private static final String[] WHITELIST = {
+            "/auth/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**"};
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        // OPTIONS(CORS freeflight), Whitelist path
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
+        for (String p : WHITELIST) {
+            if (PATH_MATCHER.match(p, path)) return true;}
+
+        String uri = request.getRequestURI();
+        return uri.startsWith("/oauth2/")
+                || uri.startsWith("/login/**")
+                || uri.startsWith("/auth/")           // 성공/실패 페이지
+                || uri.startsWith("/v3/api-docs")
+                || uri.startsWith("/swagger-ui")
+                || uri.startsWith("/swagger-resources")
+                || uri.startsWith("/webjars")
+                || uri.equals("/")
+                || uri.startsWith("/css/")
+                || uri.startsWith("/js/")
+                || uri.startsWith("/images/")
+                || uri.startsWith("/assets/")
+                || uri.equals("/favicon.ico");
+    }
+    //read cookie
+    private String resolveToken(HttpServletRequest req) {
+        // 1) 헤더 우선
+        String h = req.getHeader("Authorization");
+        if (h != null && h.startsWith("Bearer ")) {
+            return h.substring(7);
+        }
+        // 2) 쿠키에서도 시도
+        if (req.getCookies() != null) {
+            for (Cookie c : req.getCookies()) {
+                if ("ACCESS_TOKEN".equals(c.getName()) && c.getValue() != null && !c.getValue().isBlank()) {
+                    return c.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
+
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
+            throws ServletException, IOException {
+
+        try {
+            // 1) 토큰 추출: 헤더 > 쿠키(ACCESS_TOKEN)
+            String token = resolveToken(req);
+
+            if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                String username = jwtUtil.extractUsername(token);
+
+                if (username != null) {
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                    if (jwtUtil.isValid(token, userDetails.getUsername())) {
+                        UsernamePasswordAuthenticationToken auth =
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+
+                        SecurityContext context = SecurityContextHolder.createEmptyContext();
+                        context.setAuthentication(auth);
+                        SecurityContextHolder.setContext(context);
+                    }
+                    // 유효하지 않으면 그냥 익명으로 통과
+                }
+            }
+        } catch (Exception ignored) {
+            // 절대 여기서 401/에러 응답 쓰지 말 것. 다음 필터로 넘김.
+        }
+
+        chain.doFilter(req, res);
+    }
+}

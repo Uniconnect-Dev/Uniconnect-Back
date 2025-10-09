@@ -1,6 +1,6 @@
-package com.uniConnect.member.security;
+package com.uniConnect.member.security.local;
 
-import com.uniConnect.member.repository.UsersRepository;
+import com.uniConnect.member.repository.UserRepository;
 import com.uniConnect.member.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -12,7 +12,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
-    private final UsersRepository usersRepository;
+    private final UserRepository usersRepository;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
