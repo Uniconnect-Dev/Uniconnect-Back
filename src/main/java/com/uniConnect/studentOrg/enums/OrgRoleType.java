@@ -1,4 +1,4 @@
-package com.uniConnect.studentorg.enums;
+package com.uniConnect.studentOrg.enums;
 
 public enum OrgRoleType {
     Host, Partner

@@ -35,7 +35,12 @@ public class SecurityConfig {
     @Order(1)
     SecurityFilterChain oauthChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/oauth2/**", "/login/oauth2/**", "/auth/**")
+                .securityMatcher(
+                        "/oauth2/**",
+                        "/login/oauth2/**",
+                        "/auth/**",
+                        "/api/**"
+                )
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .oauth2Login(oauth -> oauth

@@ -1,7 +1,7 @@
 package com.uniConnect.campaign.entity;
 
 import com.uniConnect.campaign.enums.MatchingStatus;
-import com.uniConnect.studentorg.entity.StudentOrg;
+import com.uniConnect.studentOrg.entity.StudentOrg;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;

@@ -1,7 +1,7 @@
-package com.uniConnect.studentorg.entity;
+package com.uniConnect.studentOrg.entity;
 
-import com.uniConnect.studentorg.enums.OrgHistoryStatus;
-import com.uniConnect.studentorg.enums.OrgRoleType;
+import com.uniConnect.studentOrg.enums.OrgHistoryStatus;
+import com.uniConnect.studentOrg.enums.OrgRoleType;
 import jakarta.persistence.*;
 import lombok.*;
 
