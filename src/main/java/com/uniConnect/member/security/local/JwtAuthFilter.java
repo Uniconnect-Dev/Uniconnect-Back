@@ -28,6 +28,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final String[] WHITELIST = {
             "/auth/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**"};
 
+    //apiChain안 jwtFilter가 Auth헤더 검사하는거(swagger) 방지
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
@@ -37,9 +38,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (PATH_MATCHER.match(p, path)) return true;}
 
         String uri = request.getRequestURI();
-        return uri.startsWith("/oauth2/")
-                || uri.startsWith("/login/**")
-                || uri.startsWith("/auth/")           // 성공/실패 페이지
+        return uri.startsWith("/auth/")           // 성공/실패 페이지
                 || uri.startsWith("/v3/api-docs")
                 || uri.startsWith("/swagger-ui")
                 || uri.startsWith("/swagger-resources")

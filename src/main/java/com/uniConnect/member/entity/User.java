@@ -68,6 +68,6 @@ public class User implements UserDetails {
     public boolean isEnabled() {return true;} // 계정 활성화됨
 
     //없어도됨
-    @OneToMany(mappedBy="user") private List<OAuthAccount> oauthAccounts = new ArrayList<>();
+    @OneToMany(mappedBy="user", cascade=CascadeType.ALL, orphanRemoval = true) private List<OAuthAccount> oauthAccounts = new ArrayList<>();
     @OneToOne(mappedBy="user") private LocalCredential localCredential;
 }

@@ -21,22 +21,22 @@ public class JwtTokenService {
     public String createAccessToken(User user) {
         Instant now = Instant.now();
         return Jwts.builder()
-                .setSubject(String.valueOf(user.getUserId()))
+                .subject(String.valueOf(user.getUserId()))
                 .claim("username", user.getUsername())
                 .claim("role", user.getRole().name())
-                .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(now.plusSeconds(accessExp)))
-                .signWith(Keys.hmacShaKeyFor(secret.getBytes()), SignatureAlgorithm.HS256)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(accessExp)))
+                .signWith(Keys.hmacShaKeyFor(secret.getBytes()))
                 .compact();
     }
 
     public String createRefreshToken(User user) {
         Instant now = Instant.now();
         return Jwts.builder()
-                .setSubject(String.valueOf(user.getUserId()))
-                .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(now.plusSeconds(refreshExp)))
-                .signWith(Keys.hmacShaKeyFor(secret.getBytes()), SignatureAlgorithm.HS256)
+                .subject(String.valueOf(user.getUserId()))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plusSeconds(refreshExp)))
+                .signWith(Keys.hmacShaKeyFor(secret.getBytes()))
                 .compact();
     }
 }

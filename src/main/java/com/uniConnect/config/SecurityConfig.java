@@ -58,7 +58,7 @@ public class SecurityConfig {
             private OAuth2AuthorizationRequest customize(OAuth2AuthorizationRequest r) {
                 if (r == null) return null;
                 var extra = new java.util.HashMap<String, Object>(r.getAdditionalParameters());
-                extra.put("prompt", "select_account"); // 필요시 "consent" 또는 둘 다 사용
+                extra.put("prompt", "select_account");
                 return OAuth2AuthorizationRequest.from(r)
                         .additionalParameters(extra)
                         .build();
@@ -196,7 +196,7 @@ public class SecurityConfig {
                 // JWT 먼저 시도 (Bearer가 있으면 여기서 인증 완료)
                 .addFilterBefore(jwtAuthFilter, org.springframework.security.web.authentication.logout.LogoutFilter.class)
 
-                // 브라우저 케이스에선 OAuth2 로그인 플로우로 보낼 수 있게 활성화
+                // 브라우저 케이스에선 fe baseUrl/login(OAuth2 로그인 플로우)로 보낼 수 있게 활성화
                 .oauth2Login(oauth -> {
                     // 필요하면 resolver로 prompt=select_account 유지
                 })
