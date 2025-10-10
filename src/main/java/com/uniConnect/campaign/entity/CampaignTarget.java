@@ -1,7 +1,7 @@
 package com.uniConnect.campaign.entity;
 
-import com.uniConnect.studentorg.enums.HashtagCategory;
-import com.uniConnect.studentorg.entity.Hashtag;
+import com.uniConnect.studentOrg.enums.HashtagCategory;
+import com.uniConnect.studentOrg.entity.Hashtag;
 import jakarta.persistence.*;
 import lombok.*;
 

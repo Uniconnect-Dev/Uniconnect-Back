@@ -1,4 +1,4 @@
-package com.uniConnect.studentorg.entity;
+package com.uniConnect.studentOrg.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

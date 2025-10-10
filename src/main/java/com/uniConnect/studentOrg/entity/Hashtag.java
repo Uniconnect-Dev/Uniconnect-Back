@@ -1,6 +1,6 @@
-package com.uniConnect.studentorg.entity;
+package com.uniConnect.studentOrg.entity;
 
-import com.uniConnect.studentorg.enums.HashtagCategory;
+import com.uniConnect.studentOrg.enums.HashtagCategory;
 import jakarta.persistence.*;
 import lombok.*;
 
