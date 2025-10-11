@@ -8,7 +8,9 @@ import io.github.cdimascio.dotenv.Dotenv;
 public class UniConnectApplication {
 
 	public static void main(String[] args) {
-        Dotenv dotenv = Dotenv.load();
+        //env 파일 없어도 되도록 수정
+        Dotenv dotenv = Dotenv.configure()
+                .ignoreIfMissing().load();
         dotenv.entries().forEach(entry -> {
             System.setProperty(entry.getKey(), entry.getValue());
         });

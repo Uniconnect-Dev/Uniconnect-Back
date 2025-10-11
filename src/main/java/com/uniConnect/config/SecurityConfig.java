@@ -3,6 +3,7 @@ package com.uniConnect.config;
 import com.uniConnect.member.security.local.JwtAuthFilter;
 import com.uniConnect.member.security.oauth.*;
 import com.uniConnect.member.security.oauth.jwt.*;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -13,6 +14,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -33,7 +35,7 @@ import java.util.Set;
 public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
-    private final OAuth2SuccessHandler successHandler;   // JWT/쿠키 세팅 및 redirect
+    private final OAuth2SuccessHandler successHandler;
     private final OAuth2FailureHandler failureHandler;
     private final AuthenticationConfiguration authenticationConfiguration;
     private final ClientRegistrationRepository clientRegistrationRepository;
@@ -66,60 +68,88 @@ public class SecurityConfig {
         };
 
         http
-                .csrf(csrf -> csrf.disable())
-                .securityMatcher("/login", "/logout", "/oauth2/**", "/", "/error")
-                .authorizeHttpRequests(auth -> auth.requestMatchers(
-                                        "/", "/error", "/oauth2/**", "/login"
-                                ).permitAll()
-                                .anyRequest().authenticated()
-                )
-                // 비로그인 접근 시 구글 로그인 URL로 redirect
-                .exceptionHandling(e -> e.authenticationEntryPoint(
-                        new org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint("/oauth2/authorization/google")
-                ))
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)) //stateless시 session c 막힘
-                .oauth2Login(oauth -> oauth
-                        //oauth 화면 노출
-                        .loginPage("/oauth2/authorization/google")
-                        .authorizationEndpoint(a -> a.authorizationRequestResolver(resolver))
-                        .userInfoEndpoint(u -> u.userService(customOAuth2UserService))
-                        .successHandler(successHandler)
-                        .failureHandler(failureHandler)
-                )
-                .logout(logout -> logout
-                                // 👇 logoutUrl()만 지정하면 내부적으로 자동 RequestMatcher 등록됨
-                                .logoutUrl("/logout")
-                                // 만약 프론트가 GET으로 호출한다면:
-                                // .logoutRequestMatcher(request -> "GET".equals(request.getMethod()) && "/logout".equals(request.getRequestURI()))
+            .csrf(csrf -> csrf.disable())
+            // ⭐ OAuth2 관련 경로만 매칭
+            .securityMatcher("/login", "/logout", "/oauth2/**", "/login/oauth2/**", "/", "/error")
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/", "/error", "/oauth2/**", "/login/oauth2/**", "/login").permitAll()
+                .anyRequest().authenticated()
+            )
+            .exceptionHandling(e -> e.authenticationEntryPoint(
+                new org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint("/oauth2/authorization/google")
+            ))
+            .sessionManagement(sm -> sm
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .maximumSessions(1)
+                .maxSessionsPreventsLogin(false)
+            )
+            .oauth2Login(oauth -> oauth
+                .loginPage("/oauth2/authorization/google")
+                .authorizationEndpoint(a -> a.authorizationRequestResolver(resolver))
+                .userInfoEndpoint(u -> u.userService(customOAuth2UserService))
+                .successHandler(successHandler)
+                .failureHandler(failureHandler)
+            )
+            .logout(logout -> logout
+                .logoutUrl("/logout")
+                .clearAuthentication(true)
+                .invalidateHttpSession(true)
+                .deleteCookies("JSESSIONID", "ACCESS_TOKEN", "REFRESH_TOKEN")
+                .addLogoutHandler((req, res, auth) -> {
+                    // Authorization 헤더 처리
+                    String authzHeader = req.getHeader("Authorization");
+                    if (authzHeader != null && authzHeader.startsWith("Bearer ")) {
+                        String accessToken = authzHeader.substring(7);
+                        System.out.println("🔴 Access token invalidated: " + accessToken.substring(0, Math.min(20, accessToken.length())) + "...");
+                    }
 
-                                .clearAuthentication(true)
-                                .invalidateHttpSession(true)
-                                //Bearer token은 server가 못지움
-                                .deleteCookies("JSESSIONID", "ACCESS_TOKEN", "REFRESH_TOKEN")
-                                .addLogoutHandler((req,res,auth) -> {
-                                    // TODO: 서버 저장 Refresh 토큰/세션 삭제 + Access 토큰 블랙리스트 등록
-                                    String authz = req.getHeader("Authorization");
-                                    if (authz != null && authz.startsWith("Bearer ")) {
-                                        String accessToken = authz.substring(7);
-                                        // refreshTokenService.invalidateByAccess(accessToken);
-                                        // tokenBlacklist.add(accessToken, jwtExpiry(accessToken));
-                                    }
-                                    // 세션 기반 AuthorizedClient 쓰는 경우 제거 예시:
-                                })
-                                //oidc 공급자 logout
-                                .logoutSuccessHandler((req, res, auth) -> {
-                                    // ★ 서버는 단지 성공만 알려준다. 프런트가 여기서 토큰을 지워야 함.
-                                    res.setStatus(200);
-                                    res.setContentType("application/json;charset=UTF-8");
-                                    res.getWriter().write("{\"message\":\"logged out\"}");
-                                })
-                        //.logoutSuccessHandler(oidcLogoutSuccessHandler())
-                )
-                //basic 인증, formLogin x
-                .httpBasic(b -> b.disable())
-                .formLogin(f -> f.disable());
-        return http.build();
-    }
+                    // 세션 정리
+                    jakarta.servlet.http.HttpSession session = req.getSession(false);
+                    if (session != null) {
+                        try {
+                            session.removeAttribute("SPRING_SECURITY_CONTEXT");
+                            session.removeAttribute(
+                                "org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository.AUTHORIZED_CLIENTS"
+                            );
+                            session.invalidate();
+                            System.out.println("🔴 Session invalidated and OAuth2 clients removed");
+                        } catch (Exception e) {
+                            System.err.println("⚠️ Session cleanup failed: " + e.getMessage());
+                        }
+                    }
+
+                    // 쿠키 수동 삭제
+                    addExpiredCookie(res, "ACCESS_TOKEN");
+                    addExpiredCookie(res, "REFRESH_TOKEN");
+                    addExpiredCookie(res, "JSESSIONID");
+
+                    SecurityContextHolder.clearContext();
+                    System.out.println("🔴 Logout completed");
+                })
+                .logoutSuccessHandler((req, res, auth) -> {
+                    res.setStatus(200);
+                    res.setContentType("application/json;charset=UTF-8");
+                    String googleLogoutUrl = "https://accounts.google.com/Logout";
+                    String jsonResponse = String.format(
+                        "{\"message\":\"logged out\",\"idpLogoutUrl\":\"%s\"}", 
+                        googleLogoutUrl
+                    );
+                    res.getWriter().write(jsonResponse);
+                })
+            )
+            .httpBasic(b -> b.disable())
+            .formLogin(f -> f.disable());
+    return http.build();
+}
+
+// ⭐ 쿠키 삭제 헬퍼 메서드
+private void addExpiredCookie(jakarta.servlet.http.HttpServletResponse res, String name) {
+    Cookie cookie = new Cookie(name, null);
+    cookie.setPath("/");
+    cookie.setMaxAge(0);
+    cookie.setHttpOnly(true);
+    res.addCookie(cookie);
+}
 
     @Bean
     @Order(2)
