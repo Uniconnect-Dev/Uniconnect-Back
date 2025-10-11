@@ -24,6 +24,7 @@ public class Survey {
 
     private String title;
     private String description;
+    private String externalLink;
 
     @Enumerated(EnumType.STRING)
     private SurveyStatus status;

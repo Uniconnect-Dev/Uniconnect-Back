@@ -1,11 +1,15 @@
 package com.uniConnect.survey.controller;
 
-import com.uniConnect.survey.dto.*;
+import com.uniConnect.survey.dto.SurveyRequestDto;
+import com.uniConnect.survey.dto.SurveyResponseDto;
+import com.uniConnect.survey.entity.SurveyStatus;
 import com.uniConnect.survey.service.SurveyService;
-import com.uniConnect.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -14,26 +18,48 @@ public class SurveyController {
 
     private final SurveyService surveyService;
 
+    //설문 등록
     @PostMapping
-    public ApiResponse<SurveyResponseDto> createSurvey(@RequestBody SurveyRequestDto request) {
-        return ApiResponse.success("설문 생성 성공", surveyService.createSurvey(request));
+    public ResponseEntity<?> createSurvey(@RequestBody SurveyRequestDto dto) {
+        SurveyResponseDto created = surveyService.createSurvey(dto);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(Map.of("surveyId", created.getSurveyId(), "message", "설문이 등록되었습니다."));
     }
 
-    @GetMapping("/{studentOrgId}")
-    public ApiResponse<List<SurveyResponseDto>> getSurveys(@PathVariable Long studentOrgId) {
-        return ApiResponse.success("설문 조회 성공", surveyService.getSurveys(studentOrgId));
+    //전체 설문 조회 (관리자용)
+    @GetMapping
+    public ResponseEntity<List<SurveyResponseDto>> getAllSurveys() {
+        return ResponseEntity.ok(surveyService.getAllSurveys());
     }
 
-    @PostMapping("/{surveyId}/sampling")
-    public ApiResponse<SamplingReportResponseDto> createSamplingReport(
-            @PathVariable Long surveyId,
-            @RequestBody SamplingReportRequestDto request
+    // 특정 단체 설문 조회
+    @GetMapping("/org/{orgId}")
+    public ResponseEntity<List<SurveyResponseDto>> getSurveysByOrg(@PathVariable Long orgId) {
+        return ResponseEntity.ok(surveyService.getSurveysByOrg(orgId));
+    }
+
+    //설문 상세 조회
+    @GetMapping("/{id}")
+    public ResponseEntity<SurveyResponseDto> getSurvey(@PathVariable Long id) {
+        return ResponseEntity.ok(surveyService.getSurvey(id));
+    }
+
+    // 구글폼 링크로 이동
+    @GetMapping("/{id}/link")
+    public ResponseEntity<Void> openSurveyLink(@PathVariable Long id) {
+        String link = surveyService.getExternalLink(id);
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, link)
+                .build();
+    }
+
+    //설문 상태 변경 (PENDING → ACTIVE → CLOSED)
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<SurveyResponseDto> updateSurveyStatus(
+            @PathVariable Long id,
+            @RequestParam SurveyStatus status
     ) {
-        return ApiResponse.success("샘플링 보고서 생성 성공", surveyService.createReport(surveyId, request));
-    }
-
-    @GetMapping("/{surveyId}/sampling")
-    public ApiResponse<SamplingReportResponseDto> getSamplingReport(@PathVariable Long surveyId) {
-        return ApiResponse.success("샘플링 보고서 조회 성공", surveyService.getReport(surveyId));
+        return ResponseEntity.ok(surveyService.updateStatus(id, status));
     }
 }
+

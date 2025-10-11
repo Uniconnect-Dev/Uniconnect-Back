@@ -7,6 +7,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import com.uniConnect.studentOrg.entity.StudentOrg;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,7 +21,6 @@ import java.util.List;
 @Table(name = "users",
         uniqueConstraints = @UniqueConstraint(name = "uk_users_username", columnNames = "username"))
 public class User implements UserDetails {
-
     // 1) default
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -68,6 +68,10 @@ public class User implements UserDetails {
     public boolean isEnabled() {return true;} // 계정 활성화됨
 
     //없어도됨
-    @OneToMany(mappedBy="user", cascade=CascadeType.ALL, orphanRemoval = true) private List<OAuthAccount> oauthAccounts = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<StudentOrg> studentOrgs = new ArrayList<>();
+
+    @OneToMany(mappedBy="user") private List<OAuthAccount> oauthAccounts = new ArrayList<>();
     @OneToOne(mappedBy="user") private LocalCredential localCredential;
 }
