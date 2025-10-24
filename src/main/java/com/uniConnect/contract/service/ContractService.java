@@ -1,5 +1,7 @@
 package com.uniConnect.contract.service;
 
+import com.uniConnect.member.security.local.CustomUser;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.uniConnect.contract.dto.CompanySignRequestDto;
 import com.uniConnect.contract.dto.CompanySignResponseDto;
 import com.uniConnect.contract.dto.ContractListItemDto;
@@ -102,10 +104,9 @@ public class ContractService {
 
         // 학생 단체인 경우 studentOrgId 가져오기
         if (role.equals("ROLE_STUDENT_ORG")) {
-            // principal이 CustomUserDetails라면, 그 안에서 studentOrgId를 추출
             var principal = authentication.getPrincipal();
-            if (principal instanceof CustomUserDetails userDetails) {
-                studentOrgId = userDetails.getStudentOrgId(); // ← 여기에 실제 필드명 맞게 조정
+            if (principal instanceof CustomUser user) {
+                studentOrgId = user.getUsersId();
             } else {
                 throw new CustomException(ErrorCode.UNAUTHORIZED);
             }
