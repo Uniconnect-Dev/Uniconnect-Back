@@ -42,7 +42,7 @@ public class Contract extends BaseEntity {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 50, nullable = false)
-    private ContractStatus status = ContractStatus.PENDING_SIGNATURE;
+    private ContractStatus status = ContractStatus.PendingSignature;
 
     @Column(name = "student_signed_at")
     private LocalDateTime studentSignedAt;
@@ -79,9 +79,9 @@ public class Contract extends BaseEntity {
 
         // 학생은 싸인했지만 회사는 아직
         if (Boolean.TRUE.equals(this.companySigned)) {
-            this.status = ContractStatus.SIGNED;
+            this.status = ContractStatus.Signed;
         } else {
-            this.status = ContractStatus.STUDENT_SIGNED;
+            this.status = ContractStatus.StudentSigned;
         }
     }
 
@@ -91,9 +91,9 @@ public class Contract extends BaseEntity {
         this.companySignedAt = LocalDateTime.now();
         this.companySignatureFileUrl = companySignatureUrl;
 
-        // 양쪽 다 싸인했으면 SIGNED
+        // 양쪽 다 싸인했으면 Signed
         if (Boolean.TRUE.equals(this.studentSigned)) {
-            this.status = ContractStatus.SIGNED;
+            this.status = ContractStatus.Signed;
         }
     }
 
@@ -102,7 +102,7 @@ public class Contract extends BaseEntity {
         this.receiptSignatureFileUrl = receiptSignatureUrl;
         this.receiptSignedAt = LocalDateTime.now();
 
-        // 인수증 서명 완료되면 최종적으로 RECEIPT_SIGNED
-        this.status = ContractStatus.RECEIPT_SIGNED;
+        // 인수증 서명 완료되면 최종적으로 ReceiptSigned
+        this.status = ContractStatus.ReceiptSigned;
     }
 }

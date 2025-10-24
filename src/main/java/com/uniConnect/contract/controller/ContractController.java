@@ -68,7 +68,7 @@ public class ContractController {
      */
     @Operation(
             summary = "학생 전자서명 전송",
-            description = "학생이 계약서에 전자서명을 업로드하여 서명을 완료합니다. 상태가 PENDING_SIGNATURE → STUDENT_SIGNED로 변경됩니다."
+            description = "학생이 계약서에 전자서명을 업로드하여 서명을 완료합니다. 상태가 PendingSignature → StudentSigned로 변경됩니다."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "서명 성공",
@@ -91,7 +91,7 @@ public class ContractController {
      */
     @Operation(
             summary = "회사 전자서명 전송",
-            description = "관리자(기업 담당자)가 계약서에 전자서명을 업로드합니다. 상태가 STUDENT_SIGNED → SIGNED로 변경됩니다."
+            description = "관리자(기업 담당자)가 계약서에 전자서명을 업로드합니다. 상태가 StudentSigned → Signed로 변경됩니다."
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "서명 성공",
@@ -173,7 +173,7 @@ public class ContractController {
      */
     @Operation(
             summary = "계약 상태 변경 (관리자용)",
-            description = "관리자가 계약 상태를 직접 변경합니다. 가능한 값: PENDING_SIGNATURE, STUDENT_SIGNED, SIGNED, RECEIPT_PENDING, RECEIPT_SIGNED"
+            description = "관리자가 계약 상태를 직접 변경합니다. 가능한 값: PendingSignature, StudentSigned, Signed, ReceiptPending, ReceiptSigned"
     )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "상태 변경 성공",
@@ -186,9 +186,9 @@ public class ContractController {
             @Parameter(description = "상태를 변경할 계약서 ID", example = "1")
             @PathVariable Long contractId,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "변경할 상태 값 (예: { \"status\": \"SIGNED\" })",
+                    description = "변경할 상태 값 (예: { \"status\": \"Signed\" })",
                     required = true,
-                    content = @Content(schema = @Schema(example = "{\"status\": \"SIGNED\"}"))
+                    content = @Content(schema = @Schema(example = "{\"status\": \"Signed\"}"))
             )
             @RequestBody Map<String, String> body
     ) {

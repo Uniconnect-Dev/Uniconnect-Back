@@ -31,7 +31,7 @@ public class SurveyService {
                 .title(dto.getTitle())
                 .description(dto.getDescription())
                 .externalLink(dto.getExternalLink())
-                .status(SurveyStatus.PENDING)
+                .status(SurveyStatus.Pending)
                 .build();
 
         surveyRepository.save(survey);

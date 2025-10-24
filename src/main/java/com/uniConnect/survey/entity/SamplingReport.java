@@ -31,7 +31,7 @@ public class SamplingReport {
 
     @PrePersist
     public void prePersist() {
-        this.status = SamplingStatus.SUBMITTED;
+        this.status = SamplingStatus.Submitted;
         this.submittedAt = LocalDateTime.now();
     }
 }

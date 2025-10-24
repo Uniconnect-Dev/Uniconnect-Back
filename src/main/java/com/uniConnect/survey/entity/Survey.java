@@ -34,7 +34,7 @@ public class Survey {
 
     @PrePersist
     public void prePersist() {
-        this.status = SurveyStatus.PENDING;
+        this.status = SurveyStatus.Pending;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

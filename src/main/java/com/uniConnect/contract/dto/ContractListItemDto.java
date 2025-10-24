@@ -15,7 +15,7 @@ public class ContractListItemDto {
     private String campaignName;     // 매칭에서 캠페인 이름
     private String collaborationType; // 협업 형태, 필요하면 MatchingRequest나 Campaign에 있는 필드 매핑
 
-    private String status;           // PENDING_SIGNATURE / SIGNED / ...
+    private String status;           // PendingSignature / Singed / ...
     private Boolean studentSigned;
     private Boolean companySigned;
     private LocalDateTime studentSignedAt;
