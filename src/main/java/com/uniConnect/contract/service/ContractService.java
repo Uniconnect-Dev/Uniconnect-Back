@@ -90,15 +90,42 @@ public class ContractService {
 
     @Transactional(readOnly = true)
     public List<ContractListItemDto> getMyContracts() {
-        // TODO: 로그인한 주체(학생 단체 or admin)에 따라 필터링해야 함.
-        // 지금은 일단 전체 contracts 다 주는 형태로 구성하고, 나중에 SecurityContext에서 studentOrgId 뽑아서 where 절에 넣으면 돼.
+        // 현재 로그인한 사용자 정보 가져오기
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        List<Contract> contracts = contractRepository.findAll();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        String role = authentication.getAuthorities().iterator().next().getAuthority(); // ex: ROLE_ADMIN, ROLE_STUDENT_ORG
+        Long studentOrgId = null;
+
+        // 학생 단체인 경우 studentOrgId 가져오기
+        if (role.equals("ROLE_STUDENT_ORG")) {
+            // principal이 CustomUserDetails라면, 그 안에서 studentOrgId를 추출
+            var principal = authentication.getPrincipal();
+            if (principal instanceof CustomUserDetails userDetails) {
+                studentOrgId = userDetails.getStudentOrgId(); // ← 여기에 실제 필드명 맞게 조정
+            } else {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+        }
+
+        // 데이터 조회
+        List<Contract> contracts;
+
+        if (role.equals("ROLE_ADMIN")) {
+            // 관리자면 전체 계약서 조회
+            contracts = contractRepository.findAll();
+        } else if (studentOrgId != null) {
+            // 학생 단체면 자기 단체의 계약서만 조회
+            contracts = contractRepository.findByMatching_StudentOrg_StudentOrgId(studentOrgId);
+        } else {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
 
         return contracts.stream()
                 .map(contract -> {
-                    // matching, studentOrg, campaign은 지연 로딩일 수 있음.
-                    // 여기선 N+1 걱정은 나중에 하고, 우선 Null-safe로 조립
                     String studentOrgName = null;
                     String campaignName = null;
                     String collaborationType = null;
@@ -109,8 +136,8 @@ public class ContractService {
                             studentOrgName = matching.getStudentOrg().getOrganizationName();
                         }
                         if (matching.getCampaign() != null) {
-                            campaignName = matching.getCampaign().getName(); // 실제 필드명에 맞게 조정
-                            collaborationType = matching.getCampaign().getPurpose(); // 예: 목적/협업 형태
+                            campaignName = matching.getCampaign().getName();
+                            collaborationType = matching.getCampaign().getPurpose();
                         }
                     }
 
