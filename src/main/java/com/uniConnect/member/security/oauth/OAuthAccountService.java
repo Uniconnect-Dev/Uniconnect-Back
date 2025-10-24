@@ -59,7 +59,7 @@ public class OAuthAccountService {
         User user = User.builder()
                 .username(info.email() != null ? info.email() : info.provider() + "_" + info.providerUserId())
                 .role(UserRole.StudentOrg)
-                .status(UserStatus.Active)
+                .status(UserStatus.ACTIVE)
                 .build();
         
         User savedUser = userRepo.save(user);

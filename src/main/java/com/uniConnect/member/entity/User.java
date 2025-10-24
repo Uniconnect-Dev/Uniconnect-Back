@@ -2,32 +2,35 @@ package com.uniConnect.member.entity;
 
 import com.uniConnect.member.enums.UserRole;
 import com.uniConnect.member.enums.UserStatus;
+import com.uniConnect.studentOrg.entity.StudentOrg;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-import com.uniConnect.studentOrg.entity.StudentOrg;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
-@Table(name = "users",
-        uniqueConstraints = @UniqueConstraint(name = "uk_users_username", columnNames = "username"))
+@Table(
+        name = "users",
+        uniqueConstraints = @UniqueConstraint(name = "uk_users_username", columnNames = "username")
+)
 public class User implements UserDetails {
-    // 1) default
+
+    // 1) 기본 식별자
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Long userId;
 
-    // 2) information
+    // 2) 로그인 및 권한 정보
     @Column(name = "username", length = 50, nullable = false)
     private String username;
 
@@ -46,32 +49,72 @@ public class User implements UserDetails {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // 3) relations - (양방향 컬렉션 필요 시 추가)
-
-    // ===== UserDetails 구현 메서드 =====
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 권한을 간단히 "ROLE_USER"로 고정
-        return Collections.singleton(() -> "ROLE_USER");
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {return true;} // 계정 만료 안 됨
-
-    @Override
-    public boolean isAccountNonLocked() {return true;} // 계정 잠김 아님
-
-    @Override
-    public boolean isCredentialsNonExpired() {return true;} // 비밀번호 만료 안 됨
-
-    @Override
-    public boolean isEnabled() {return true;} // 계정 활성화됨
-
-    //없어도됨
-
+    // 3) 연관관계 설정
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StudentOrg> studentOrgs = new ArrayList<>();
 
-    @OneToMany(mappedBy="user") private List<OAuthAccount> oauthAccounts = new ArrayList<>();
-    @OneToOne(mappedBy="user") private LocalCredential localCredential;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OAuthAccount> oauthAccounts = new ArrayList<>();
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private LocalCredential localCredential;
+
+    // ===== UserDetails 구현부 =====
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        // DB에 저장된 UserRole 값을 기반으로 권한 생성
+        if (this.role != null) {
+            return List.of((GrantedAuthority) () -> "ROLE_" + this.role.name());
+        }
+        return List.of((GrantedAuthority) () -> "ROLE_USER");
+    }
+
+    @Override
+    public String getPassword() {
+        return this.password;
+    }
+
+    @Override
+    public String getUsername() {
+        return this.username;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        // 만약 UserStatus를 기준으로 계정 활성화 제어하고 싶으면 이렇게 변경 가능
+        return this.status == null || this.status == UserStatus.ACTIVE;
+    }
+
+    // ===== 헬퍼 메서드 =====
+
+    public void addStudentOrg(StudentOrg org) {
+        this.studentOrgs.add(org);
+        org.setUser(this);
+    }
+
+    public void addOAuthAccount(OAuthAccount account) {
+        this.oauthAccounts.add(account);
+        account.setUser(this);
+    }
+
+    public void setLocalCredential(LocalCredential credential) {
+        this.localCredential = credential;
+        credential.setUser(this);
+    }
 }

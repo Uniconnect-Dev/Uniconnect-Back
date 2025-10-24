@@ -1,5 +1,6 @@
 package com.uniConnect.contract.enums;
 
 public enum ContractStatus {
-    PendingSignature, Signed
+    PENDING_SIGNATURE,
+    SIGNED
 }

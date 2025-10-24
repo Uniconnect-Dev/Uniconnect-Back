@@ -1,5 +1,8 @@
 package com.uniConnect.campaign.entity;
 
+import java.util.List;
+import java.util.ArrayList;
+import com.uniConnect.contract.entity.Contract;
 import com.uniConnect.campaign.enums.MatchingStatus;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import jakarta.persistence.*;
@@ -34,4 +37,8 @@ public class MatchingRequest {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_org_id")
     private StudentOrg studentOrg;
+
+    @OneToMany(mappedBy = "matching", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<Contract> contracts = new ArrayList<>();
 }
