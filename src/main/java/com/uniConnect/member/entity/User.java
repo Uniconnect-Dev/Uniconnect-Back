@@ -98,7 +98,7 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         // 만약 UserStatus를 기준으로 계정 활성화 제어하고 싶으면 이렇게 변경 가능
-        return this.status == null || this.status == UserStatus.ACTIVE;
+        return this.status == null || this.status == UserStatus.Active;
     }
 
     // ===== 헬퍼 메서드 =====
