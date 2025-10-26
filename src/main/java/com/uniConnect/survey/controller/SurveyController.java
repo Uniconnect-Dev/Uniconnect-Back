@@ -46,7 +46,7 @@ public class SurveyController {
                 .body(Map.of("surveyId", created.getSurveyId(), "message", "설문이 등록되었습니다."));
     }
 
-    @@Operation(summary = "전체 설문 조회 (관리자용)")
+    @Operation(summary = "전체 설문 조회 (관리자용)")
     @GetMapping
     public ResponseEntity<List<SurveyResponseDto>> getAllSurveys() {
         return ResponseEntity.ok(surveyService.getAllSurveys());
