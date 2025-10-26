@@ -3,7 +3,7 @@ package com.uniConnect.survey.dto;
 import lombok.Getter;
 
 @Getter
-public class SamplingReportRequestDto {
+public class SurveyReportRequestDto {
     private String reportTitle;
     private String content;
     private String fileUrl;
