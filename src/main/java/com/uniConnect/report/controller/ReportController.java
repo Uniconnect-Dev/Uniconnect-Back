@@ -1,19 +1,19 @@
 package com.uniConnect.report.controller;
 
-import com.uniConnect.member.security.local.CustomUser;
+import com.uniConnect.global.response.ApiResponse;
 import com.uniConnect.report.dto.ReportDetailResponseDto;
 import com.uniConnect.report.dto.ReportListResponseDto;
 import com.uniConnect.report.dto.ReportPdfMetaDto;
 import com.uniConnect.report.service.ReportPdfService;
 import com.uniConnect.report.service.ReportQueryService;
-import com.uniConnect.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -28,27 +28,30 @@ public class ReportController {
     private final ReportQueryService reportQueryService;
     private final ReportPdfService reportPdfService;
 
-    @Operation(summary = "리포트 목록 조회 (JWT)")
+    @Operation(summary = "리포트 목록 조회 (JWT 기반, loginId 사용)")
     @GetMapping
     public ResponseEntity<ApiResponse<List<ReportListResponseDto>>> getReportList(
-            @AuthenticationPrincipal CustomUser user,
             @RequestParam(required = false) String productName,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        String loginId = (String) authentication.getPrincipal();
+
+        Long userId = reportQueryService.findUserIdByLoginId(loginId);
+
         List<ReportListResponseDto> result = reportQueryService.getReportList(
-                user.getUsersId(), productName, dateFrom, dateTo, page, size
+                userId, productName, dateFrom, dateTo, page, size
         );
         return ResponseEntity.ok(ApiResponse.success("리포트 목록 조회 성공", result));
     }
 
     @Operation(summary = "리포트 상세 조회 (JWT)")
     @GetMapping("/{reportId}")
-    public ResponseEntity<ReportDetailResponseDto> getReportDetail(
-            @PathVariable Long reportId
-    ) {
+    public ResponseEntity<ReportDetailResponseDto> getReportDetail(@PathVariable Long reportId) {
         ReportDetailResponseDto detail = reportQueryService.getReportDetail(reportId);
         return ResponseEntity.ok(detail);
     }
@@ -65,4 +68,3 @@ public class ReportController {
         return reportPdfService.downloadPdf(reportId);
     }
 }
-
