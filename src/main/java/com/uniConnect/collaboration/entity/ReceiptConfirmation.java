@@ -29,7 +29,7 @@ public class ReceiptConfirmation {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 30)
-    private ReceiptStatus status; // PENDING_UPLOAD, WAITING_APPROVAL, APPROVED
+    private ReceiptStatus status; // PendingSignature, WaitingApproval, Approved
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "collaboration_id")
