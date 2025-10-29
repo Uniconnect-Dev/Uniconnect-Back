@@ -1,9 +1,11 @@
 package com.uniConnect.collaboration.entity;
 
 import com.uniConnect.campaign.entity.MatchingRequest;
-import com.uniConnect.collaboration.enums.UploaderType;
+import com.uniConnect.collaboration.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -24,9 +26,17 @@ public class ContentUpload {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "uploader_type", length = 20)
-    private UploaderType uploaderType;
+    private UploaderType uploaderType; // COMPANY, STUDENT_ORG
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "matching_id")
-    private MatchingRequest matching;
+    @JoinColumn(name = "collaboration_id")
+    private Collaboration collaboration;
+
+    @Column(name = "uploaded_at")
+    private LocalDateTime uploadedAt;
+
+    @PrePersist
+    public void prePersist() {
+        this.uploadedAt = LocalDateTime.now();
+    }
 }

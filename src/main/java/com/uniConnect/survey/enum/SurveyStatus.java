@@ -1,5 +1,5 @@
 package com.uniConnect.survey.entity;
 
 public enum SurveyStatus {
-    PENDING, SUBMITTED, APPROVED, REJECTED
+    Pending, Submitted, Approved, Rejected
 }

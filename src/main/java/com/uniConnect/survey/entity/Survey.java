@@ -22,8 +22,12 @@ public class Survey {
     @JoinColumn(name = "student_org_id")
     private StudentOrg studentOrg;
 
+    @OneToOne(mappedBy = "survey", cascade = CascadeType.ALL, orphanRemoval = true)
+    private SurveyReport surveyReport;
+
     private String title;
     private String description;
+    private String externalLink;
 
     @Enumerated(EnumType.STRING)
     private SurveyStatus status;
@@ -33,7 +37,7 @@ public class Survey {
 
     @PrePersist
     public void prePersist() {
-        this.status = SurveyStatus.PENDING;
+        this.status = SurveyStatus.Pending;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

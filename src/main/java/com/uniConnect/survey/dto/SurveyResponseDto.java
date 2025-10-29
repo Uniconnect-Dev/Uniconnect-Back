@@ -1,23 +1,35 @@
 package com.uniConnect.survey.dto;
 
 import com.uniConnect.survey.entity.Survey;
-import lombok.Builder;
-import lombok.Getter;
+import com.uniConnect.survey.entity.SurveyStatus;
+import lombok.*;
+import java.time.LocalDateTime;
 
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class SurveyResponseDto {
     private Long surveyId;
+    private Long studentOrgId;
     private String title;
     private String description;
-    private String status;
+    private String externalLink;
+    private SurveyStatus status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
-    public static SurveyResponseDto fromEntity(Survey survey) {
+    public static SurveyResponseDto fromEntity(Survey s) {
         return SurveyResponseDto.builder()
-                .surveyId(survey.getSurveyId())
-                .title(survey.getTitle())
-                .description(survey.getDescription())
-                .status(survey.getStatus().name())
+                .surveyId(s.getSurveyId())
+                .studentOrgId(s.getStudentOrg().getStudentOrgId())
+                .title(s.getTitle())
+                .description(s.getDescription())
+                .externalLink(s.getExternalLink())
+                .status(s.getStatus())
+                .createdAt(s.getCreatedAt())
+                .updatedAt(s.getUpdatedAt())
                 .build();
     }
 }

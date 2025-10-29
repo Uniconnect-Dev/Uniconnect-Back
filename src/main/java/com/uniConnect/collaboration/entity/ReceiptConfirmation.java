@@ -3,7 +3,9 @@ package com.uniConnect.collaboration.entity;
 import com.uniConnect.campaign.entity.MatchingRequest;
 import jakarta.persistence.*;
 import lombok.*;
+import com.uniConnect.collaboration.enums.*;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -16,22 +18,20 @@ public class ReceiptConfirmation {
     @Column(name = "receipt_id")
     private Long receiptId;
 
-    @Column(name = "receiver_name", length = 60)
     private String receiverName;
-
-    @Column(name = "location", length = 200)
     private String location;
 
     @Column(name = "receipt_image_url", columnDefinition = "text")
     private String receiptImageUrl;
 
-    @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
-
-    @Column(name = "approved_at")
     private LocalDateTime approvedAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 30)
+    private ReceiptStatus status; // PENDING_UPLOAD, WAITING_APPROVAL, APPROVED
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "matching_id")
-    private MatchingRequest matching;
+    @JoinColumn(name = "collaboration_id")
+    private Collaboration collaboration;
 }
