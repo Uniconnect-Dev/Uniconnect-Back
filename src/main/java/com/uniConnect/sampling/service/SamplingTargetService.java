@@ -2,18 +2,18 @@ package com.uniConnect.sampling.service;
 
 import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.global.exception.ErrorCode;
-import com.uniConnect.member.entity.LocalCredential;
-import com.uniConnect.member.entity.User;
-import com.uniConnect.member.repository.LocalCredentialRepository;
-import com.uniConnect.sampling.dto.*;
+import com.uniConnect.sampling.dto.SamplingTargetOptionDto;
+import com.uniConnect.sampling.dto.SamplingTargetRequestDto;
+import com.uniConnect.sampling.dto.SamplingTargetResponseDto;
+import com.uniConnect.sampling.dto.response.SamplingTargetKeywordResponse;
+import com.uniConnect.sampling.entity.SamplingRequest;
 import com.uniConnect.sampling.entity.SamplingTargetKeyword;
 import com.uniConnect.sampling.entity.SamplingTargetSelection;
 import com.uniConnect.sampling.enums.SamplingTargetCategory;
+import com.uniConnect.sampling.repository.SamplingRequestRepository;
 import com.uniConnect.sampling.repository.SamplingTargetKeywordRepository;
 import com.uniConnect.sampling.repository.SamplingTargetSelectionRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,100 +24,90 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SamplingTargetService {
 
-    private final LocalCredentialRepository localCredentialRepository;
+    private final SamplingRequestRepository requestRepository;
     private final SamplingTargetKeywordRepository keywordRepository;
     private final SamplingTargetSelectionRepository selectionRepository;
 
     private static final int MAX = 5;
 
-    /**
-     * 타깃 키워드 저장 + 저장 후 결과 반환
-     */
     @Transactional
-    public SamplingTargetResponseDto saveTargetSelection(SamplingTargetRequestDto requestDto) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String loginId = (String) authentication.getPrincipal();
+    public SamplingTargetResponseDto saveTargetSelection(SamplingTargetRequestDto dto) {
 
-        User user = localCredentialRepository.findByLoginId(loginId)
-                .map(LocalCredential::getUser)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        SamplingRequest req = requestRepository.findById(dto.getRequestId())
+                .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        upsert(user, SamplingTargetCategory.Category1, requestDto.getCategory1KeywordIds());
-        upsert(user, SamplingTargetCategory.Category2, requestDto.getCategory2KeywordIds());
-        upsert(user, SamplingTargetCategory.Category3, requestDto.getCategory3KeywordIds());
+        if (dto.getCategory1KeywordIds() != null && dto.getCategory1KeywordIds().size() > MAX)
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        if (dto.getCategory2KeywordIds() != null && dto.getCategory2KeywordIds().size() > MAX)
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
-        return getTargetSelection(user);
+        List<SamplingTargetSelection> oldSelections =
+                selectionRepository.findBySamplingRequest_SamplingRequestId(req.getSamplingRequestId());
+        selectionRepository.deleteAll(oldSelections);
+
+        List<Long> allIds = new ArrayList<>();
+        if (dto.getCategory1KeywordIds() != null) allIds.addAll(dto.getCategory1KeywordIds());
+        if (dto.getCategory2KeywordIds() != null) allIds.addAll(dto.getCategory2KeywordIds());
+        if (dto.getCategory3KeywordIds() != null) allIds.addAll(dto.getCategory3KeywordIds());
+        if (dto.getIndustryOfficialKeywordIds() != null) allIds.addAll(dto.getIndustryOfficialKeywordIds());
+
+        List<SamplingTargetKeyword> keywords = allIds.isEmpty()
+                ? List.of()
+                : keywordRepository.findAllById(allIds);
+
+        // 4) Selection 재구성하여 저장
+        List<SamplingTargetSelection> toSave = keywords.stream()
+                .map(k -> SamplingTargetSelection.builder()
+                        .samplingRequest(req)
+                        .targetKeyword(k)
+                        .category(k.getCategory())
+                        .selectedLabel(k.getLabel())
+                        .build()
+                )
+                .collect(Collectors.toList());
+        selectionRepository.saveAll(toSave);
+
+        // 5) 저장 후 결과 조회/반환
+        return getTargetSelection(dto.getRequestId());
     }
 
     /**
-     * 로그인 사용자 기준 조회 (컨트롤러에서 사용)
+     * 현재 선택 + 옵션 조회
      */
     @Transactional(readOnly = true)
-    public SamplingTargetResponseDto getTargetSelection() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String loginId = (String) authentication.getPrincipal();
+    public SamplingTargetResponseDto getTargetSelection(Long requestId) {
+        SamplingRequest req = requestRepository.findById(requestId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        User user = localCredentialRepository.findByLoginId(loginId)
-                .map(LocalCredential::getUser)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        List<SamplingTargetSelection> selections =
+                selectionRepository.findBySamplingRequest_SamplingRequestId(req.getSamplingRequestId());
 
-        return getTargetSelection(user);
-    }
-
-    /**
-     * 내부 공용 함수: 특정 사용자 기준 조회
-     */
-    @Transactional(readOnly = true)
-    private SamplingTargetResponseDto getTargetSelection(User user) {
         Map<SamplingTargetCategory, List<String>> selected = new EnumMap<>(SamplingTargetCategory.class);
         for (SamplingTargetCategory c : SamplingTargetCategory.values()) selected.put(c, new ArrayList<>());
 
-        List<SamplingTargetSelection> selections = selectionRepository.findByUser_UserId(user.getUserId());
         for (SamplingTargetSelection s : selections) {
-            List<String> list = Arrays.stream(s.getSelectedKeywordsCsv().split(","))
-                    .map(String::trim)
-                    .filter(str -> !str.isEmpty())
-                    .toList();
-            selected.put(s.getCategory(), list);
+            selected.get(s.getCategory()).add(s.getTargetKeyword().getLabel());
         }
 
+        List<SamplingTargetOptionDto> c1Options = toOptionList(SamplingTargetCategory.BasicInfo);
+        List<SamplingTargetOptionDto> c2Options = toOptionList(SamplingTargetCategory.Lifestyle);
+        List<SamplingTargetOptionDto> c3Options = toOptionList(SamplingTargetCategory.EventNature);
+        List<SamplingTargetOptionDto> indOptions = toOptionList(SamplingTargetCategory.IndustryOfficial);
+
         return SamplingTargetResponseDto.builder()
-                .category1Keywords(selected.get(SamplingTargetCategory.Category1))
-                .category2Keywords(selected.get(SamplingTargetCategory.Category2))
-                .category3Keywords(selected.get(SamplingTargetCategory.Category3))
-                .category1Options(toOptionList(SamplingTargetCategory.Category1))
-                .category2Options(toOptionList(SamplingTargetCategory.Category2))
-                .category3Options(toOptionList(SamplingTargetCategory.Category3))
+                .requestId(requestId)
+                .category1Keywords(selected.get(SamplingTargetCategory.BasicInfo))
+                .category2Keywords(selected.get(SamplingTargetCategory.Lifestyle))
+                .category3Keywords(selected.get(SamplingTargetCategory.EventNature))
+                .industryOfficialKeywords(selected.get(SamplingTargetCategory.IndustryOfficial))
+                .category1Options(c1Options)
+                .category2Options(c2Options)
+                .category3Options(c3Options)
+                .industryOfficialOptions(indOptions)
                 .build();
     }
 
-    /**
-     * DB 갱신 or 신규 저장
-     */
-    private void upsert(User user, SamplingTargetCategory category, List<Long> ids) {
-        if (ids == null || ids.isEmpty() || ids.size() > MAX)
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
-
-        List<SamplingTargetKeyword> keywords = keywordRepository.findByTargetKeywordIdIn(ids);
-
-        String csv = keywords.stream()
-                .map(SamplingTargetKeyword::getLabel)
-                .collect(Collectors.joining(","));
-
-        SamplingTargetSelection selection = selectionRepository
-                .findByUser_UserIdAndCategory(user.getUserId(), category)
-                .orElseGet(() -> SamplingTargetSelection.builder()
-                        .user(user)
-                        .category(category)
-                        .build());
-
-        selection.setSelectedKeywordsCsv(csv);
-        selectionRepository.save(selection);
-    }
-
-    /**
-     * 카테고리별 전체 옵션 목록 반환
-     */
+    /** 카테고리별 전체 옵션 목록 반환 */
     private List<SamplingTargetOptionDto> toOptionList(SamplingTargetCategory category) {
         return keywordRepository.findByCategoryAndIsActiveTrueOrderByLabelAsc(category)
                 .stream()
@@ -126,6 +116,15 @@ public class SamplingTargetService {
                         .label(k.getLabel())
                         .description(k.getDescription())
                         .build())
-                .toList();
+                .collect(Collectors.toList());
+    }
+
+    /** 단일 카테고리 키워드 리스트 조회 */
+    @Transactional(readOnly = true)
+    public List<SamplingTargetKeywordResponse> getKeywordsByCategory(SamplingTargetCategory category) {
+        return keywordRepository.findByCategoryAndIsActiveTrueOrderByLabelAsc(category)
+                .stream()
+                .map(k -> new SamplingTargetKeywordResponse(k.getTargetKeywordId(), k.getLabel()))
+                .collect(Collectors.toList());
     }
 }

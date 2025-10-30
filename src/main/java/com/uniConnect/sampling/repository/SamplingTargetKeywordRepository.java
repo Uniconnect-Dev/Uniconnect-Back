@@ -7,6 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface SamplingTargetKeywordRepository extends JpaRepository<SamplingTargetKeyword, Long> {
+    List<SamplingTargetKeyword> findByCategory(SamplingTargetCategory category);
     List<SamplingTargetKeyword> findByCategoryAndIsActiveTrueOrderByLabelAsc(SamplingTargetCategory category);
-    List<SamplingTargetKeyword> findByTargetKeywordIdIn(List<Long> ids);
 }

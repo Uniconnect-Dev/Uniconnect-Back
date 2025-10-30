@@ -4,6 +4,9 @@ import com.uniConnect.sampling.enums.SamplingTargetCategory;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "sampling_target_keyword")
 @Getter
@@ -30,4 +33,12 @@ public class SamplingTargetKeyword {
 
     @Column(nullable = false)
     private boolean isActive;
+
+    @OneToMany(mappedBy = "targetKeyword", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SamplingTargetSelection> selections = new ArrayList<>();
+
+    public void addSelection(SamplingTargetSelection selection) {
+        this.selections.add(selection);
+        selection.setTargetKeyword(this);
+    }
 }

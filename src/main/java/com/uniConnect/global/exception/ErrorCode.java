@@ -32,8 +32,8 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
 
     // 샘플링 관련
-    SAMPLING_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "샘플링 요청을 찾을 수 없습니다.");
-
+    SAMPLING_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "샘플링 요청을 찾을 수 없습니다."),
+    RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 리소스를 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;
