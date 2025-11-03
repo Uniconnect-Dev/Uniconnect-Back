@@ -3,6 +3,7 @@ package com.uniConnect.studentOrg.entity;
 import com.uniConnect.member.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.List;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
