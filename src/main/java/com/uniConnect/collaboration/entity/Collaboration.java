@@ -27,6 +27,15 @@ public class Collaboration {
     @Column(name = "status", length = 20)
     private CollaborationStatus status; // Ready, InProgress, WaitingReceipt, Completed
 
+    @Column(name = "contract_url", columnDefinition = "text")
+    private String contractUrl; // 전자계약 문서 URL
+
+    @Column(name = "student_signed_at")
+    private LocalDateTime studentSignedAt;
+
+    @Column(name = "admin_contract_approved_at")
+    private LocalDateTime adminContractApprovedAt;
+
     @OneToMany(mappedBy = "collaboration", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductInfo> productInfos;
 
@@ -38,6 +47,9 @@ public class Collaboration {
 
     @OneToMany(mappedBy = "collaboration", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReceiptConfirmation> receipts;
+
+    @OneToMany(mappedBy = "collaboration", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CollaborationReport> reports;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -51,6 +63,7 @@ public class Collaboration {
 
     @PreUpdate
     public void preUpdate() {
+
         this.updatedAt = LocalDateTime.now();
     }
 }
