@@ -23,7 +23,7 @@ public class ReportAccessValidator {
             throw new SecurityException("인증되지 않은 사용자입니다.");
         }
 
-        Long loginUserId = user.getUsersId();
+        Long loginUserId = user.getUserId();
 
         SamplingReport report = samplingReportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("리포트를 찾을 수 없습니다. id=" + reportId));

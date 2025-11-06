@@ -30,7 +30,7 @@ public class ComplianceController {
             HttpServletRequest httpRequest
     ) {
         ComplianceAgreementResponse response = complianceService.agreeToCompliance(
-                customUser.getUsersId(),
+                customUser.getUserId(),
                 request,
                 httpRequest
         );

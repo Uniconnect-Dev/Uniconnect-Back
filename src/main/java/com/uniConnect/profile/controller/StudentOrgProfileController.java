@@ -23,7 +23,7 @@ public class StudentOrgProfileController {
             @AuthenticationPrincipal CustomUser customUser,
             @RequestBody StudentOrgInitRequest request
     ) {
-        StudentOrgGetResponse response = studentOrgProfileService.initProfile(customUser.getUsersId(), request);
+        StudentOrgGetResponse response = studentOrgProfileService.initProfile(customUser.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -31,7 +31,7 @@ public class StudentOrgProfileController {
     public ResponseEntity<ApiResponse<StudentOrgGetResponse>> getProfile(
             @AuthenticationPrincipal CustomUser customUser
     ) {
-        StudentOrgGetResponse response = studentOrgProfileService.getProfile(customUser.getUsersId());
+        StudentOrgGetResponse response = studentOrgProfileService.getProfile(customUser.getUserId());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -40,7 +40,7 @@ public class StudentOrgProfileController {
             @AuthenticationPrincipal CustomUser customUser,
             @RequestBody StudentOrgUpdateRequest request
     ) {
-        StudentOrgGetResponse response = studentOrgProfileService.updateProfile(customUser.getUsersId(), request);
+        StudentOrgGetResponse response = studentOrgProfileService.updateProfile(customUser.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

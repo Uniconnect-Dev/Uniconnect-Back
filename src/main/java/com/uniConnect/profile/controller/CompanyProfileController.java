@@ -23,7 +23,7 @@ public class CompanyProfileController {
             @AuthenticationPrincipal CustomUser customUser,
             @RequestBody CompanyInitRequest request
     ) {
-        CompanyGetResponse response = companyProfileService.initProfile(customUser.getUsersId(), request);
+        CompanyGetResponse response = companyProfileService.initProfile(customUser.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -31,7 +31,7 @@ public class CompanyProfileController {
     public ResponseEntity<ApiResponse<CompanyGetResponse>> getProfile(
             @AuthenticationPrincipal CustomUser customUser
     ) {
-        CompanyGetResponse response = companyProfileService.getProfile(customUser.getUsersId());
+        CompanyGetResponse response = companyProfileService.getProfile(customUser.getUserId());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -40,7 +40,7 @@ public class CompanyProfileController {
             @AuthenticationPrincipal CustomUser customUser,
             @RequestBody CompanyUpdateRequest request
     ) {
-        CompanyGetResponse response = companyProfileService.updateProfile(customUser.getUsersId(), request);
+        CompanyGetResponse response = companyProfileService.updateProfile(customUser.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
