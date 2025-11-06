@@ -15,7 +15,7 @@ import java.time.Duration;
 import java.util.List;
 
 @RestController
-@RequestMapping("/s3")
+@RequestMapping("/api/s3")
 @RequiredArgsConstructor
 @Validated
 public class S3Controller {
