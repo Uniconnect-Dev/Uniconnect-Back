@@ -1,9 +1,11 @@
 package com.uniConnect.sampling.service;
 
 import com.uniConnect.sampling.dto.*;
-import com.uniConnect.sampling.repository.StudentOrgQueryRepository;
-import com.uniConnect.studentOrg.entity.StudentOrg;
-import com.uniConnect.studentOrg.entity.StudentOrgAvailability;
+import com.uniConnect.sampling.repository.*;
+import com.uniConnect.sampling.entity.*;
+import com.uniConnect.studentOrg.entity.*;
+import com.uniConnect.sampling.enums.SamplingStatus;
+import com.uniConnect.sampling.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +18,9 @@ import java.util.stream.Collectors;
 public class SamplingMatchService {
 
     private final StudentOrgQueryRepository StudentOrgQueryRepository;
+    private final SamplingRequestRepository samplingRequestRepository;
+    private final SamplingTargetKeywordRepository targetKeywordRepository;
+    private final SamplingTargetSelectionRepository targetSelectionRepository;
 
     /**
      * 기업 조건 기반 매칭된 학생단체 리스트 조회
@@ -100,4 +105,49 @@ public class SamplingMatchService {
                 .message(message)
                 .build();
     }
+
+    /**
+     * 매칭 요청 확정하기 (매칭 요청하기 버튼 클릭)
+     */
+    @Transactional
+    public SamplingMatchSubmitResponse submitSamplingMatch(SamplingMatchRequestDto dto) {
+
+        SamplingRequest request = samplingRequestRepository.findById(dto.getSamplingRequestId())
+                .orElseThrow(() -> new IllegalArgumentException("해당 샘플링 요청을 찾을 수 없습니다."));
+
+        if (dto.getSelectedKeywordIds() == null || dto.getSelectedKeywordIds().isEmpty()) {
+            throw new IllegalArgumentException("최소 1개 이상의 타깃 키워드를 선택해야 합니다.");
+        }
+
+        targetSelectionRepository.deleteAll(request.getSelections());
+        request.getSelections().clear();
+
+        List<SamplingTargetKeyword> keywords = targetKeywordRepository.findAllById(dto.getSelectedKeywordIds());
+
+        for (SamplingTargetKeyword keyword : keywords) {
+            SamplingTargetSelection selection = SamplingTargetSelection.of(request, keyword);
+            request.addSelection(selection);
+        }
+
+        request.setStatus(SamplingStatus.Submitted);
+        samplingRequestRepository.save(request);
+
+        List<SamplingMatchSubmitResponse.SelectedTargetDto> targetDtos = request.getSelections().stream()
+                .map(sel -> SamplingMatchSubmitResponse.SelectedTargetDto.builder()
+                        .selectionId(sel.getSelectionId())
+                        .keywordId(sel.getTargetKeyword().getTargetKeywordId())
+                        .label(sel.getSelectedLabel())
+                        .category(sel.getCategory().name())
+                        .build())
+                .toList();
+
+        return SamplingMatchSubmitResponse.builder()
+                .samplingRequestId(request.getSamplingRequestId())
+                .status(request.getStatus())
+                .orgName(request.getOrgName())
+                .schoolName(request.getSchoolName())
+                .selectedTargets(targetDtos)
+                .build();
+    }
+
 }
