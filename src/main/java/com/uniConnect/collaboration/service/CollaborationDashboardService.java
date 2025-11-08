@@ -5,9 +5,13 @@ import com.uniConnect.collaboration.entity.*;
 import com.uniConnect.collaboration.enums.*;
 import com.uniConnect.collaboration.repository.*;
 import com.uniConnect.common.service.FileStorageService;
+import com.uniConnect.s3.S3FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
+
 
 import java.time.LocalDateTime;
 
@@ -22,6 +26,10 @@ public class CollaborationDashboardService {
     private final ContentUploadRepository contentUploadRepository;
     private final ReceiptConfirmationRepository receiptRepository;
     private final FileStorageService fileStorageService;
+    private final S3FileService s3FileService;
+
+    @Value("${app.s3.bucket}")
+    private String bucketName;
 
     // 헬퍼: collaboration 조회
     private Collaboration getCollabOrThrow(Long collaborationId) {
@@ -76,50 +84,67 @@ public class CollaborationDashboardService {
     }
 
     // 3. 기업/학생단체: 이미지 업로드
-    public ContentUploadResponse uploadContent(ContentUploadRequest req) {
-        Collaboration collab = getCollabOrThrow(req.getCollaborationId());
-        String url = null;
+    public ContentUploadResponse uploadContentToS3(Long collaborationId,
+                                                   String uploaderTypeStr,
+                                                   String caption,
+                                                   MultipartFile image) throws Exception {
 
-        if (req.getImage() != null && !req.getImage().isEmpty()) {
-            url = fileStorageService.uploadImage(req.getImage());
+        Collaboration collab = getCollabOrThrow(collaborationId);
+
+        String key = "collaboration/" + collaborationId + "/uploads/" + image.getOriginalFilename();
+        s3FileService.upload(bucketName, key, image);
+        String url = "https://" + bucketName + ".s3.amazonaws.com/" + key;
+
+        UploaderType uploaderType;
+        if ("Company".equalsIgnoreCase(uploaderTypeStr)) {
+            uploaderType = UploaderType.Company;
+        } else if ("Admin".equalsIgnoreCase(uploaderTypeStr)) {
+            uploaderType = UploaderType.Admin;
+        } else {
+            uploaderType = UploaderType.StudentOrg;
         }
-
-        UploaderType uploaderType = switch (req.getUploaderType()) {
-            case "Company" -> UploaderType.Company;
-            case "Admin" -> UploaderType.Admin;
-            default -> UploaderType.StudentOrg;
-        };
 
         ContentUpload upload = ContentUpload.builder()
                 .collaboration(collab)
                 .imageUrl(url)
-                .caption(req.getCaption())
+                .caption(caption)
                 .uploaderType(uploaderType)
                 .build();
+
         contentUploadRepository.save(upload);
 
-        upsertTaskStatus(collab, TaskType.ContentShare,
-                uploaderType == UploaderType.StudentOrg ? TaskStatus.Done : TaskStatus.InProgress,
-                uploaderType.name(), null);
+        // 태스크 업데이트
+        TaskStatus contentStatus = (uploaderType == UploaderType.StudentOrg) ? TaskStatus.Done : TaskStatus.InProgress;
+        upsertTaskStatus(collab, TaskType.ContentShare, contentStatus, uploaderType.name(), null);
 
         return ContentUploadResponse.from(upload);
     }
 
+
+
     // 4. 학생단체: 인수증 제출
-    public ReceiptResponse submitReceipt(ReceiptUploadRequest req) {
-        Collaboration collab = getCollabOrThrow(req.getCollaborationId());
-        String receiptUrl = fileStorageService.uploadImage(req.getReceiptImage());
+    public ReceiptResponse submitReceiptToS3(Long collaborationId,
+                                             String receiverName,
+                                             String location,
+                                             MultipartFile receiptImage) throws Exception {
+
+        Collaboration collab = getCollabOrThrow(collaborationId);
+
+        String key = "collaboration/" + collaborationId + "/receipts/" + receiptImage.getOriginalFilename();
+        s3FileService.upload(bucketName, key, receiptImage);
+        String url = "https://" + bucketName + ".s3.amazonaws.com/" + key;
 
         ReceiptConfirmation receipt = ReceiptConfirmation.builder()
                 .collaboration(collab)
-                .receiverName(req.getReceiverName())
-                .location(req.getLocation())
-                .receiptImageUrl(receiptUrl)
+                .receiverName(receiverName)
+                .location(location)
+                .receiptImageUrl(url)
                 .status(ReceiptStatus.WaitingApproval)
                 .submittedAt(LocalDateTime.now())
                 .build();
 
         receiptRepository.save(receipt);
+
         upsertTaskStatus(collab, TaskType.Receipt, TaskStatus.InProgress, "StudentOrg", null);
         collab.setStatus(CollaborationStatus.WaitingReceipt);
 
@@ -151,7 +176,6 @@ public class CollaborationDashboardService {
         return TaskResponse.from(task);
     }
 
-    // upsertTaskStatus 리턴 타입 수정
     private CollaborationTask upsertTaskStatus(
             Collaboration collab,
             TaskType type,
@@ -171,11 +195,12 @@ public class CollaborationDashboardService {
 
         task.setStatus(status);
         task.setUpdatedBy(updatedBy);
-        if (deadline != null) task.setDeadline(deadline);
+        if (deadline != null) {
+            task.setDeadline(deadline);
+        }
         return taskRepository.save(task);
     }
 
-    // 진행 현황 통합 조회
     @Transactional(readOnly = true)
     public CollaborationDashboardResponse getDashboard(Long collaborationId) {
         Collaboration collab = getCollabOrThrow(collaborationId);

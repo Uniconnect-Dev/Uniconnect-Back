@@ -20,7 +20,7 @@ public class Collaboration {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "matching_id")
+    @JoinColumn(name = "matching_id", unique = true)
     private MatchingRequest matching;
 
     @Enumerated(EnumType.STRING)
@@ -50,6 +50,8 @@ public class Collaboration {
 
     @OneToMany(mappedBy = "collaboration", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CollaborationReport> reports;
+
+
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

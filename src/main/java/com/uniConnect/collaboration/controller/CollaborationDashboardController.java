@@ -3,10 +3,12 @@ package com.uniConnect.collaboration.controller;
 import com.uniConnect.collaboration.dto.*;
 import com.uniConnect.collaboration.service.CollaborationDashboardService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import org.springframework.web.multipart.MultipartFile;
+import com.uniConnect.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,12 +32,6 @@ public class CollaborationDashboardController {
             description = "특정 collaborationId에 해당하는 협업 진행 현황을 조회합니다. "
                     + "기업과 학생단체 모두 접근 가능합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = CollaborationDashboardResponse.class))),
-            @ApiResponse(responseCode = "404", description = "존재하지 않는 협업 ID",
-                    content = @Content(schema = @Schema(example = "{\"message\":\"Collaboration not found\"}")))
-    })
     @GetMapping("/{collaborationId}")
     public ResponseEntity<CollaborationDashboardResponse> getDashboard(
             @PathVariable Long collaborationId
@@ -50,10 +46,6 @@ public class CollaborationDashboardController {
             summary = "기업 - 제품 정보 등록",
             description = "기업이 협업 중 공유할 제품명, 개수, 설명 등을 입력합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "제품 정보 등록 성공",
-                    content = @Content(schema = @Schema(implementation = ProductInfoResponse.class)))
-    })
     @PostMapping("/company/product-info")
     public ResponseEntity<ProductInfoResponse> addProductInfo(
             @RequestBody ProductInfoRequest request
@@ -68,11 +60,6 @@ public class CollaborationDashboardController {
             description = "기업이 발송일자, 배송 여부, 운송장 번호를 입력합니다. "
                     + "발송 완료 시 협업 상태가 WaitingReceipt로 변경됩니다."
     )
-    @ApiResponse(
-            responseCode = "200",
-            description = "배송 정보 업데이트 성공",
-            content = @Content(schema = @Schema(implementation = ProductInfoResponse.class))
-    )
     @PatchMapping("/company/shipping-info")
     public ResponseEntity<ProductInfoResponse> updateShippingInfo(
             @RequestBody ShippingInfoRequest request
@@ -80,41 +67,69 @@ public class CollaborationDashboardController {
         return ResponseEntity.ok(dashboardService.updateShippingInfo(request));
     }
 
-    // 공통: 이미지 업로드 (기업/학생단체)
     @Operation(
-            summary = "이미지 업로드 (기업 / 학생단체)",
-            description = "기업 또는 학생단체가 제품 사진, 로고, 카드뉴스 등 이미지를 업로드합니다. "
-                    + "Form-Data로 전송해야 합니다."
+            summary = "이미지 업로드 (S3)",
+            description = "기업 또는 학생단체가 제품 사진, 로고, 카드뉴스 등을 업로드합니다. Form-Data 형식으로 전송."
     )
-    @ApiResponse(
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
-            description = "이미지 업로드 성공",
-            content = @Content(schema = @Schema(implementation = ContentUploadResponse.class))
+            description = "조회 성공"
     )
-    @PostMapping("/content/upload")
-    public ResponseEntity<ContentUploadResponse> uploadContent(
-            @ModelAttribute ContentUploadRequest request
-    ) throws MultipartException {
-        return ResponseEntity.ok(dashboardService.uploadContent(request));
+    @PostMapping(value = "/content/upload", consumes = "multipart/form-data")
+    public ApiResponse<ContentUploadResponse> uploadContent(
+            @Parameter(description = "협업 ID", required = true)
+            @RequestPart("collaborationId") Long collaborationId,
+
+            @Parameter(description = "업로더 유형 (Company / StudentOrg / Admin)", required = true)
+            @RequestPart("uploaderType") String uploaderType,
+
+            @Parameter(description = "이미지 설명", required = false)
+            @RequestPart(value = "caption", required = false) String caption,
+
+            @Parameter(
+                    description = "업로드할 이미지 파일 (JPG, PNG 등)",
+                    required = true,
+                    content = @Content(mediaType = "multipart/form-data",
+                            schema = @Schema(type = "string", format = "binary"))
+            )
+            @RequestPart("image") MultipartFile image
+    ) throws Exception {
+        ContentUploadResponse response =
+                dashboardService.uploadContentToS3(collaborationId, uploaderType, caption, image);
+        return ApiResponse.success("이미지 업로드 완료", response);
     }
 
-    // 학생단체: 인수증 제출
+    // 학생단체 인수증 제출
     @Operation(
             summary = "학생단체 - 인수증 제출",
-            description = "학생단체가 제품 수령 후 인수증을 업로드합니다. "
-                    + "인수증은 이미지 파일 형태로 Form-Data로 업로드됩니다."
+            description = "학생단체가 제품 수령 후 인수증 이미지를 업로드합니다."
     )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "인수증 제출 성공",
-                    content = @Content(schema = @Schema(implementation = ReceiptResponse.class))),
-            @ApiResponse(responseCode = "400", description = "파일 누락 또는 잘못된 요청",
-                    content = @Content(schema = @Schema(example = "{\"message\":\"Missing receipt image\"}")))
-    })
-    @PostMapping("/receipt/submit")
-    public ResponseEntity<ReceiptResponse> submitReceipt(
-            @ModelAttribute ReceiptUploadRequest request
-    ) {
-        return ResponseEntity.ok(dashboardService.submitReceipt(request));
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "조회 성공"
+    )
+    @PostMapping(value = "/receipt/submit", consumes = "multipart/form-data")
+    public ApiResponse<ReceiptResponse> submitReceipt(
+            @Parameter(description = "협업 ID", required = true)
+            @RequestPart("collaborationId") Long collaborationId,
+
+            @Parameter(description = "수령자 이름", required = true)
+            @RequestPart("receiverName") String receiverName,
+
+            @Parameter(description = "수령 장소", required = false)
+            @RequestPart(value = "location", required = false) String location,
+
+            @Parameter(
+                    description = "인수증 이미지 파일",
+                    required = true,
+                    content = @Content(mediaType = "multipart/form-data",
+                            schema = @Schema(type = "string", format = "binary"))
+            )
+            @RequestPart("receiptImage") MultipartFile receiptImage
+    ) throws Exception {
+        ReceiptResponse response =
+                dashboardService.submitReceiptToS3(collaborationId, receiverName, location, receiptImage);
+        return ApiResponse.success("인수증 업로드 완료", response);
     }
 
     // 기업: 인수증 승인
@@ -123,10 +138,14 @@ public class CollaborationDashboardController {
             description = "기업이 학생단체가 제출한 인수증을 검토 후 전자 서명(승인)을 완료합니다. "
                     + "승인 시 협업 상태가 Completed로 변경됩니다."
     )
-    @ApiResponse(
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "인수증 승인 완료",
-            content = @Content(schema = @Schema(implementation = ReceiptResponse.class))
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = ReceiptResponse.class
+                    )
+            )
     )
     @PatchMapping("/receipt/approve")
     public ResponseEntity<ReceiptResponse> approveReceipt(
@@ -141,10 +160,14 @@ public class CollaborationDashboardController {
             description = "기업이 캘린더를 통해 행사 일자를 지정합니다. "
                     + "해당 날짜는 관련 Task의 마감일로 등록됩니다."
     )
-    @ApiResponse(
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
             description = "행사 날짜 등록 완료",
-            content = @Content(schema = @Schema(implementation = TaskResponse.class))
+            content = @io.swagger.v3.oas.annotations.media.Content(
+                    schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = ReceiptResponse.class
+                    )
+            )
     )
     @PatchMapping("/company/date-fix")
     public ResponseEntity<TaskResponse> fixDate(
