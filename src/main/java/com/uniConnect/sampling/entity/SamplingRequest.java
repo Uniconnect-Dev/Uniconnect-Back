@@ -3,7 +3,7 @@ package com.uniConnect.sampling.entity;
 import com.uniConnect.member.entity.User;
 import com.uniConnect.sampling.enums.IndustryType;
 import com.uniConnect.sampling.entity.SamplingTargetSelection;
-import com.uniConnect.sampling.enums.SamplingRequestStatus;
+import com.uniConnect.sampling.enums.SamplingStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,7 +28,7 @@ public class SamplingRequest {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user; // 요청 생성자 (기업 계정)
+    private User user; // 요청 생성자 (학생 단체 계정)
 
     // Step1: 단체 기본 정보
     @Column(length = 100)
@@ -67,7 +67,7 @@ public class SamplingRequest {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private SamplingRequestStatus status;
+    private SamplingStatus status;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -85,7 +85,7 @@ public class SamplingRequest {
 
     @PrePersist
     public void prePersist() {
-        if (this.status == null) this.status = SamplingRequestStatus.Draft;
+        if (this.status == null) this.status = SamplingStatus.Draft;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

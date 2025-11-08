@@ -1,7 +1,7 @@
 package com.uniConnect.sampling.dto.response;
 
 import com.uniConnect.sampling.enums.IndustryType;
-import com.uniConnect.sampling.enums.SamplingRequestStatus;
+import com.uniConnect.sampling.enums.SamplingStatus;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -19,6 +19,6 @@ public record SamplingRequestSummaryResponse(
         LocalDate eventEndDate,
         IndustryType industry,
         String proposalFileUrl,
-        SamplingRequestStatus status,
+        SamplingStatus status,
         List<String> selectedTags
 ) {}
