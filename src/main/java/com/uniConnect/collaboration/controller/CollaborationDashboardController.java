@@ -2,6 +2,13 @@ package com.uniConnect.collaboration.controller;
 
 import com.uniConnect.collaboration.dto.*;
 import com.uniConnect.collaboration.service.CollaborationDashboardService;
+import com.uniConnect.member.security.local.CustomUser;
+import com.uniConnect.member.entity.User;
+import com.uniConnect.member.enums.UserRole;
+import com.uniConnect.member.repository.UserRepository;
+import com.uniConnect.member.security.local.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import com.uniConnect.member.repository.LocalCredentialRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,9 +18,12 @@ import org.springframework.web.multipart.MultipartFile;
 import com.uniConnect.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @Tag(
         name = "협업 대시보드 API",
@@ -25,20 +35,28 @@ import org.springframework.web.multipart.MultipartException;
 public class CollaborationDashboardController {
 
     private final CollaborationDashboardService dashboardService;
+    private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+    private final LocalCredentialRepository localCredentialRepository;
 
-    // 대시보드 전체 조회
-    @Operation(
-            summary = "협업 대시보드 조회",
-            description = "특정 collaborationId에 해당하는 협업 진행 현황을 조회합니다. "
-                    + "기업과 학생단체 모두 접근 가능합니다."
-    )
-    @GetMapping("/{collaborationId}")
-    public ResponseEntity<CollaborationDashboardResponse> getDashboard(
+    // 협업 대시보드 전체 조회
+    @Operation(summary = "협업 대시보드 조회", description = "기업/학생단체 공용 협업 대시보드를 조회합니다.")
+    @GetMapping("/{collaborationId}/dashboard")
+    public ApiResponse<CollaborationDashboardResponse> getDashboard(
             @PathVariable Long collaborationId
     ) {
-        return ResponseEntity.ok(
-                dashboardService.getDashboard(collaborationId)
-        );
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String loginId = authentication.getName();
+
+        var credential = localCredentialRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new IllegalArgumentException("로그인 아이디에 해당하는 사용자를 찾을 수 없습니다: " + loginId));
+
+        User user = credential.getUser();
+
+        CollaborationDashboardResponse dashboard =
+                dashboardService.getDashboard(collaborationId, user.getUserId(), user.getRole().name());
+
+        return ApiResponse.success("협업 대시보드 조회 성공", dashboard);
     }
 
     // 기업: 제품 정보 등록

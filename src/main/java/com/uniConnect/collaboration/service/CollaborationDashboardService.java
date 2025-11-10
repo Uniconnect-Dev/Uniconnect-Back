@@ -4,15 +4,22 @@ import com.uniConnect.collaboration.dto.*;
 import com.uniConnect.collaboration.entity.*;
 import com.uniConnect.collaboration.enums.*;
 import com.uniConnect.collaboration.repository.*;
+import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.common.service.FileStorageService;
+import com.uniConnect.campaign.repository.MatchingRequestRepository;
+import com.uniConnect.member.enums.UserRole;
+import com.uniConnect.global.exception.ErrorCode;
+import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.s3.S3FileService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 
-
+import java.util.List;
 import java.time.LocalDateTime;
 
 @Service
@@ -27,6 +34,9 @@ public class CollaborationDashboardService {
     private final ReceiptConfirmationRepository receiptRepository;
     private final FileStorageService fileStorageService;
     private final S3FileService s3FileService;
+    private final ShippingInfoRepository shippingInfoRepository;
+    private final StudentReceiveInfoRepository studentReceiveInfoRepository;
+    private final MatchingRequestRepository matchingRequestRepository;
 
     @Value("${app.s3.bucket}")
     private String bucketName;
@@ -201,15 +211,26 @@ public class CollaborationDashboardService {
         return taskRepository.save(task);
     }
 
+    // 협업 대시보드 조회(학생단체 & 기업 공용)
     @Transactional(readOnly = true)
-    public CollaborationDashboardResponse getDashboard(Long collaborationId) {
-        Collaboration collab = getCollabOrThrow(collaborationId);
+    public CollaborationDashboardResponse getDashboard(Long collaborationId, Long userId, String role) {
+        Collaboration collab = collaborationRepository.findById(collaborationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
 
-        var tasks = taskRepository.findByCollaboration(collab);
-        var products = productInfoRepository.findByCollaboration(collab);
-        var uploads = contentUploadRepository.findByCollaboration(collab);
-        var receipts = receiptRepository.findByCollaboration(collab);
+        boolean hasAccess = matchingRequestRepository.existsByMatchingIdAndStudentOrg_User_UserId(
+                collab.getMatching().getMatchingId(),
+                userId
+        );
 
-        return CollaborationDashboardResponse.from(collab, tasks, products, uploads, receipts);
+        if (!hasAccess) {
+            throw new CustomException(ErrorCode.FORBIDDEN);
+        }
+
+        List<CollaborationTask> tasks = taskRepository.findByCollaboration(collab);
+        List<ProductInfo> products = productInfoRepository.findByCollaboration(collab);
+        List<ContentUpload> uploads = contentUploadRepository.findByCollaboration(collab);
+        List<ReceiptConfirmation> receipts = receiptRepository.findByCollaboration(collab);
+
+        return CollaborationDashboardResponse.from(collab, tasks, products, uploads, receipts, role);
     }
 }
