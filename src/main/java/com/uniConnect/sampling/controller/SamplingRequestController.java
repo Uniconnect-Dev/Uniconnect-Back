@@ -16,11 +16,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -65,8 +66,13 @@ public class SamplingRequestController {
     /** Step 1 */
     @Operation(summary = "Step 1: 단체 기본정보 입력", description = "학교명, 단체명, 담당자명, 전화번호, 이메일을 등록 또는 수정합니다.")
     @PutMapping("/{id}/org-info")
-    public ApiResponse<SamplingRequestSummaryResponse> step1(@PathVariable Long id, @Valid @RequestBody OrgInfoRequest dto) {
+    public ApiResponse<SamplingRequestSummaryResponse> step1(
+            @PathVariable Long id,
+            @Valid @RequestBody OrgInfoRequest dto
+    ) {
+
         requestService.updateStep1(id, dto);
+
         SamplingRequestSummaryResponse summary = requestService.getSummary(id);
         return ApiResponse.success("단체 기본정보 저장 완료", summary);
     }
@@ -191,6 +197,17 @@ public class SamplingRequestController {
     }
 
     @Operation(
+            summary = "Step 9-1: 인수증 승인 (관리자)",
+            description = "관리자가 인수증을 승인하여 상태를 ReportPending으로 변경합니다."
+    )
+    @PostMapping("/{id}/receipt/approve")
+    public ApiResponse<SamplingRequestSummaryResponse> approveReceipt(@PathVariable Long id) {
+        requestService.approveReceipt(id);
+        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
+        return ApiResponse.success("인수증 승인 완료", summary);
+    }
+
+    @Operation(
             summary = "Step 10: 리포트 업로드",
             description = "행사 종료 후 리포트를 업로드합니다."
     )
@@ -211,6 +228,17 @@ public class SamplingRequestController {
         requestService.uploadReport(id, file);
         SamplingRequestSummaryResponse summary = requestService.getSummary(id);
         return ApiResponse.success("리포트 업로드 완료", summary);
+    }
+
+    @Operation(
+            summary = "Step 10-1: 리포트 승인 (관리자)",
+            description = "관리자가 리포트를 승인하여 상태를 SurveyPending으로 변경합니다."
+    )
+    @PostMapping("/{id}/report/approve")
+    public ApiResponse<SamplingRequestSummaryResponse> approveReport(@PathVariable Long id) {
+        requestService.approveReport(id);
+        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
+        return ApiResponse.success("리포트 승인 완료", summary);
     }
 
     @Operation(

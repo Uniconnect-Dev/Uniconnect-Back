@@ -1,0 +1,2 @@
+ALTER TABLE sampling_request
+ALTER COLUMN status TYPE VARCHAR(50);

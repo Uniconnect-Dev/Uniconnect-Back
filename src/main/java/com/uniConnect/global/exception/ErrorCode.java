@@ -37,7 +37,9 @@ public enum ErrorCode {
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
 
     // 협업 관련
-    COLLABORATION_NOT_FOUND(HttpStatus.NOT_FOUND, "협업 정보를 찾을 수 없습니다.");
+    COLLABORATION_NOT_FOUND(HttpStatus.NOT_FOUND, "협업 정보를 찾을 수 없습니다."),
+    CAMPAIGN_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 캠페인을 찾을 수 없습니다."),
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 리포트를 찾을 수 없습니다.");
 
     private final HttpStatus status;
     private final String message;

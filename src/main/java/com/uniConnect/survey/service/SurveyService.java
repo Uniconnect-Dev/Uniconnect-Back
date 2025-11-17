@@ -40,7 +40,7 @@ public class SurveyService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 loginId의 사용자를 찾을 수 없습니다."));
 
         // 해당 유저가 소속된 StudentOrg 조회
-        StudentOrg org = studentOrgRepository.findByUser_UserId(user.getUserId())
+        StudentOrg org = studentOrgRepository.findByUsers_UserId(user.getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 단체를 찾을 수 없습니다."));
 
         // 설문 생성
@@ -64,7 +64,7 @@ public class SurveyService {
                 .map(LocalCredential::getUser)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 loginId의 사용자를 찾을 수 없습니다."));
 
-        StudentOrg org = studentOrgRepository.findByUser_UserId(user.getUserId())
+        StudentOrg org = studentOrgRepository.findByUsers_UserId(user.getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 단체를 찾을 수 없습니다."));
 
         return org.getStudentOrgId();

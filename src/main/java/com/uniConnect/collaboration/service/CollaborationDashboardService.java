@@ -217,7 +217,7 @@ public class CollaborationDashboardService {
         Collaboration collab = collaborationRepository.findById(collaborationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
 
-        boolean hasAccess = matchingRequestRepository.existsByMatchingIdAndStudentOrg_User_UserId(
+        boolean hasAccess = matchingRequestRepository.existsByMatchingIdAndStudentOrgUsers(
                 collab.getMatching().getMatchingId(),
                 userId
         );

@@ -23,7 +23,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/surveys")
-@Tag(name = "Survey API", description = "설문 등록 및 조회 관련 API (JWT 인증 기반)")
+@Tag(name = "Survey API", description = "설문 등록 및 조회 관련 API")
 public class SurveyController {
 
     private final SurveyService surveyService;
@@ -31,13 +31,12 @@ public class SurveyController {
     @Operation(summary = "설문 등록", description = "JWT 인증을 사용해 로그인한 단체가 새 설문을 등록합니다.")
     @PostMapping
     public ResponseEntity<?> createSurvey(@RequestBody SurveyRequestDto dto) {
-        // JWT sub에 들어있는 loginId를 principal로 가져옴
         SurveyResponseDto created = surveyService.createSurveyByJwt(dto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("surveyId", created.getSurveyId(), "message", "설문이 등록되었습니다."));
     }
 
-    @Operation(summary = "전체 설문 조회 (관리자용)")
+    @Operation(summary = "전체 설문 조회")
     @GetMapping
     public ResponseEntity<List<SurveyResponseDto>> getAllSurveys() {
         return ResponseEntity.ok(surveyService.getAllSurveys());

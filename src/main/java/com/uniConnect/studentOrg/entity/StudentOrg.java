@@ -7,7 +7,7 @@ import com.uniConnect.studentOrg.enums.OrganizationType;
 import com.uniConnect.global.converter.EnumPascalCaseConverter;
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.List;
+import java.util.*;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -54,9 +54,9 @@ public class StudentOrg {
     private CollaborationType collaborationType;
 
     // relation
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    @OneToMany(mappedBy = "studentOrg", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<User> users = new ArrayList<>();
 
     @OneToMany(mappedBy = "studentOrg", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StudentOrgKeyword> keywords;

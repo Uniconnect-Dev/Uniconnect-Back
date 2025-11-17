@@ -14,7 +14,7 @@ import java.util.Optional;
 @Repository
 public interface StudentOrgRepository extends JpaRepository<StudentOrg, Long> {
 
-    Optional<StudentOrg> findByUser_UserId(Long userId);
+    Optional<StudentOrg> findByUsers_UserId(Long userId);
 
     /**
      * 협업 이력이 있는 단체만 불러오고,

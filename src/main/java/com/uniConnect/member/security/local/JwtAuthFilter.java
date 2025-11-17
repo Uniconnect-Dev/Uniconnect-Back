@@ -99,6 +99,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                     // Role 추출
                     String role = jwtUtil.extractClaim(token, "role");
+                    if (role == null || role.isBlank()) {
+                        role = "USER";
+                    }
+
                     var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
 
                     // 인증 객체 생성

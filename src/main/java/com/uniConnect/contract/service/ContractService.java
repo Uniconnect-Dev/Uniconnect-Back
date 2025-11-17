@@ -36,13 +36,13 @@ public class ContractService {
     @Transactional(readOnly = true)
     public List<ContractListItemDto> getMyContracts() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String loginId = (String) authentication.getPrincipal(); // ✅ JWT sub = loginId
+        String loginId = (String) authentication.getPrincipal();
 
         User user = localCredentialRepository.findByLoginId(loginId)
                 .map(LocalCredential::getUser)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 loginId의 사용자를 찾을 수 없습니다."));
 
-        StudentOrg org = studentOrgRepository.findByUser_UserId(user.getUserId())
+        StudentOrg org = studentOrgRepository.findByUsers_UserId(user.getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 사용자가 속한 단체를 찾을 수 없습니다."));
 
         List<Contract> contracts = contractRepository.findByMatching_StudentOrg_StudentOrgId(org.getStudentOrgId());
