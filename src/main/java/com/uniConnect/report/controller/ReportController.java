@@ -6,6 +6,7 @@ import com.uniConnect.report.dto.ReportListResponseDto;
 import com.uniConnect.report.dto.ReportPdfMetaDto;
 import com.uniConnect.report.service.ReportPdfService;
 import com.uniConnect.report.service.ReportQueryService;
+import com.uniConnect.member.security.local.CustomUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class ReportController {
     private final ReportQueryService reportQueryService;
     private final ReportPdfService reportPdfService;
 
-    @Operation(summary = "리포트 목록 조회 (JWT 기반, loginId 사용)")
+    @Operation(summary = "리포트 목록 조회 (JWT 기반)")
     @GetMapping
     public ResponseEntity<ApiResponse<List<ReportListResponseDto>>> getReportList(
             @RequestParam(required = false) String productName,
@@ -38,14 +39,13 @@ public class ReportController {
             @RequestParam(defaultValue = "20") int size
     ) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        String loginId = (String) authentication.getPrincipal();
-
-        Long userId = reportQueryService.findUserIdByLoginId(loginId);
+        CustomUser user = (CustomUser) authentication.getPrincipal();
+        Long userId = Long.valueOf(user.getUserId());
 
         List<ReportListResponseDto> result = reportQueryService.getReportList(
                 userId, productName, dateFrom, dateTo, page, size
         );
+
         return ResponseEntity.ok(ApiResponse.success("리포트 목록 조회 성공", result));
     }
 

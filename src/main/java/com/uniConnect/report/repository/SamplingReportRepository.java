@@ -12,21 +12,20 @@ import java.time.LocalDateTime;
 
 public interface SamplingReportRepository extends JpaRepository<SamplingReport, Long>, SamplingReportRepositoryCustom {
     @Query("""
-    SELECT r 
-    FROM SamplingReport r
-    JOIN r.campaign c
-    JOIN c.studentOrg so
-    JOIN so.users u
-    WHERE u.userId = :userId
-      AND (:status IS NULL OR r.status = :status)
-      AND (:start IS NULL OR r.createdAt >= :start)
-      AND (:end IS NULL OR r.createdAt <= :end)
+select r from SamplingReport r
+join r.campaign c
+join c.studentOrg so
+join so.users u
+where u.userId = :userId
+  and (r.status = coalesce(:status, r.status))
+  and (r.createdAt >= coalesce(:start, r.createdAt))
+  and (r.createdAt <= coalesce(:end, r.createdAt))
 """)
     Page<SamplingReport> findReports(
-            @Param("userId") Long userId,
-            @Param("status") SamplingReportStatus status,
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
+            Long userId,
+            SamplingReportStatus status,
+            LocalDateTime start,
+            LocalDateTime end,
             Pageable pageable
     );
 }

@@ -78,8 +78,13 @@ public class ReportQueryService {
             statusEnum = SamplingReportStatus.valueOf(status);
         }
 
-        LocalDateTime start = (startDate != null) ? startDate.atStartOfDay() : null;
-        LocalDateTime end = (endDate != null) ? endDate.atTime(23, 59, 59) : null;
+        LocalDateTime start = (startDate != null)
+                ? startDate.atStartOfDay()
+                : LocalDateTime.of(1970, 1, 1, 0, 0);
+
+        LocalDateTime end = (endDate != null)
+                ? endDate.atTime(23, 59, 59)
+                : LocalDateTime.of(2100, 12, 31, 23, 59);
 
         Page<SamplingReport> reports = samplingReportRepository.findReports(
                 userId, statusEnum, start, end, pageable
