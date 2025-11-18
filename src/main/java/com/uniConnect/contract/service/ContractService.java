@@ -6,6 +6,7 @@ import com.uniConnect.contract.enums.ContractStatus;
 import com.uniConnect.contract.repository.ContractRepository;
 import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.global.exception.ErrorCode;
+import com.uniConnect.member.security.local.CustomUser;
 import com.uniConnect.member.entity.LocalCredential;
 import com.uniConnect.member.entity.User;
 import com.uniConnect.member.repository.LocalCredentialRepository;
@@ -35,22 +36,26 @@ public class ContractService {
      */
     @Transactional(readOnly = true)
     public List<ContractListItemDto> getMyContracts() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String loginId = (String) authentication.getPrincipal();
 
-        User user = localCredentialRepository.findByLoginId(loginId)
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        CustomUser principal = (CustomUser) auth.getPrincipal();
+
+        Long userId = Long.valueOf(principal.getUserId());
+        User user = localCredentialRepository.findByUserUserId(userId)
                 .map(LocalCredential::getUser)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 loginId의 사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        StudentOrg org = studentOrgRepository.findByUsers_UserId(user.getUserId())
+        StudentOrg org = studentOrgRepository.findByUsers_UserId(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 사용자가 속한 단체를 찾을 수 없습니다."));
 
-        List<Contract> contracts = contractRepository.findByMatching_StudentOrg_StudentOrgId(org.getStudentOrgId());
+        List<Contract> contracts =
+                contractRepository.findByMatching_StudentOrg_StudentOrgId(org.getStudentOrgId());
 
         return contracts.stream()
                 .map(ContractListItemDto::fromEntity)
                 .collect(Collectors.toList());
     }
+
 
     /**
      * 계약 상세 조회
