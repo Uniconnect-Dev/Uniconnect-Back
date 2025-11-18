@@ -6,6 +6,7 @@ import com.uniConnect.member.repository.UserRepository;
 import com.uniConnect.s3.S3FileService;
 import com.uniConnect.sampling.dto.request.*;
 import com.uniConnect.sampling.dto.response.*;
+import com.uniConnect.sampling.dto.FeeResponse;
 import com.uniConnect.sampling.entity.*;
 import com.uniConnect.sampling.enums.*;
 import com.uniConnect.sampling.enums.SamplingStatus;
@@ -31,6 +32,9 @@ public class SamplingRequestService {
     private final S3FileService s3FileService;
     private final SamplingRequestRepository samplingRequestRepository;
     private final UserRepository userRepository;
+
+    private static final int PER_SAMPLING_FEE = 50_000;   // 건당 수수료
+    private static final int DEPOSIT = 50_000;            // 보증금
 
     @Value("${app.s3.bucket}")
     private String bucketName;
@@ -218,6 +222,15 @@ public class SamplingRequestService {
                 req.getStatus(),
                 tagList
         );
+    }
+
+    /** 학생단체 금액 안내 */
+    public FeeResponse getFeeInformation() {
+        return FeeResponse.builder()
+                .perSamplingFee(PER_SAMPLING_FEE)
+                .deposit(DEPOSIT)
+                .totalEstimatedAmount(PER_SAMPLING_FEE + DEPOSIT)
+                .build();
     }
 
     public SamplingRequest findById(Long id) {

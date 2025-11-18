@@ -5,6 +5,7 @@ import com.uniConnect.member.security.local.CustomUser;
 import com.uniConnect.member.repository.UserRepository;
 import com.uniConnect.sampling.dto.request.*;
 import com.uniConnect.sampling.dto.response.*;
+import com.uniConnect.sampling.dto.FeeResponse;
 import com.uniConnect.member.entity.User;
 import com.uniConnect.member.entity.LocalCredential;
 import com.uniConnect.member.repository.LocalCredentialRepository;
@@ -265,5 +266,11 @@ public class SamplingRequestController {
     public ApiResponse<SamplingRequestSummaryResponse> summary(@PathVariable Long id) {
         SamplingRequestSummaryResponse summary = requestService.getSummary(id);
         return ApiResponse.success("요약 조회 성공", summary);
+    }
+
+    @Operation(summary = "학생단체 샘플링 비용 정보 조회", description = "건당 수수료 및 보증금 안내")
+    @GetMapping("/fee")
+    public ApiResponse<FeeResponse> getSamplingFees() {
+        return ApiResponse.success(requestService.getFeeInformation());
     }
 }
