@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class StudentOrgProfileService {
+public class StudentOrgService {
 
     private final StudentOrgRepository studentOrgRepository;
     private final StudentOrgAvailabilityRepository availabilityRepository;

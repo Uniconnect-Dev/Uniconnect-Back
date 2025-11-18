@@ -6,7 +6,7 @@ import com.uniConnect.studentOrg.dto.StudentOrgProfileDetailResponse;
 import com.uniConnect.studentOrg.dto.StudentOrgProfileListResponse;
 import com.uniConnect.studentOrg.enums.CollaborationType;
 import com.uniConnect.studentOrg.enums.OrganizationType;
-import com.uniConnect.studentOrg.service.StudentOrgProfileService;
+import com.uniConnect.studentOrg.service.StudentOrgService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +18,9 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/student-orgs/profiles")
-public class StudentOrgProfileController {
+public class StudentOrgController {
 
-    private final StudentOrgProfileService profileService;
+    private final StudentOrgService profileService;
 
     @Operation(summary = "학생 단체 프로필 리스트 조회", description = "검색/필터를 통해 유니커넥트와 협업한 학생단체를 조회합니다.")
     @GetMapping

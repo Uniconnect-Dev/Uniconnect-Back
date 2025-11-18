@@ -16,7 +16,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class CompanyProfileQueryService {
+public class CompanyQueryService {
 
     private final CompanyRepository companyRepository;
     private final CompanyProfileRepository profileRepository;
@@ -47,7 +47,7 @@ public class CompanyProfileQueryService {
                     .logoUrl(company.getLogoUrl())
                     .shortDescription(shortDesc)
                     .industryName(
-                            company.getIndustry() != null ? company.getIndustry().getName() : null
+                            company.getIndustry() != null ? company.getIndustry().getIndustryName() : null
                     )
                     .build();
         }).toList();
@@ -69,7 +69,7 @@ public class CompanyProfileQueryService {
                 .description(profile != null ? profile.getDescription() : null)
                 .website(profile != null ? profile.getWebsite() : null)
                 .snsUrl(profile != null ? profile.getSnsUrl() : null)
-                .industryName(company.getIndustry() != null ? company.getIndustry().getName() : null)
+                .industryName(company.getIndustry() != null ? company.getIndustry().getIndustryName() : null)
                 .build();
     }
 }

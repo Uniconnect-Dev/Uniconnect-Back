@@ -24,6 +24,18 @@ public enum ErrorCode {
     ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 데이터입니다."),
     DUPLICATE_RESOURCE(HttpStatus.CONFLICT, "이미 존재하는 데이터입니다."),
 
+    // 프로필 관련
+    PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "프로필을 찾을 수 없습니다."),
+    ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 프로필이 존재합니다."),
+
+    // 산업 관련
+    INDUSTRY_NOT_FOUND(HttpStatus.NOT_FOUND, "산업 분류를 찾을 수 없습니다."),
+
+    // Compliance 관련
+    COMPLIANCE_AGREEMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "동의 내역을 찾을 수 없습니다."),
+    COMPLIANCE_ALREADY_AGREED(HttpStatus.CONFLICT, "이미 동의한 요청입니다."),
+    COMPLIANCE_INCOMPLETE(HttpStatus.BAD_REQUEST, "모든 항목에 동의해야 합니다."),
+
     // 서버 관련
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
 

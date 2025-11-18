@@ -2,7 +2,7 @@ package com.uniConnect.company.controller;
 
 import com.uniConnect.company.dto.response.CompanyCardResponse;
 import com.uniConnect.company.dto.response.CompanyDetailResponse;
-import com.uniConnect.company.service.CompanyProfileQueryService;
+import com.uniConnect.company.service.CompanyQueryService;
 import com.uniConnect.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -20,9 +20,9 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/companies")
-public class CompanyProfileController {
+public class CompanyController {
 
-    private final CompanyProfileQueryService companyProfileQueryService;
+    private final CompanyQueryService companyQueryService;
 
     @Operation(summary = "기업 리스트 조회")
     @ApiResponses({
@@ -36,7 +36,7 @@ public class CompanyProfileController {
     })
     @GetMapping("/list")
     public ApiResponse<List<CompanyCardResponse>> getCompanyList() {
-        return ApiResponse.success(companyProfileQueryService.getCompanyList());
+        return ApiResponse.success(companyQueryService.getCompanyList());
     }
 
     @Operation(summary = "기업 상세 조회")
@@ -56,6 +56,6 @@ public class CompanyProfileController {
             @Parameter(description = "조회할 기업 ID", example = "1")
             @PathVariable Long companyId
     ) {
-        return ApiResponse.success(companyProfileQueryService.getCompanyDetail(companyId));
+        return ApiResponse.success(companyQueryService.getCompanyDetail(companyId));
     }
 }

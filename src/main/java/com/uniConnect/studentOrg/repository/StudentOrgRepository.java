@@ -13,13 +13,9 @@ import java.util.Optional;
 
 @Repository
 public interface StudentOrgRepository extends JpaRepository<StudentOrg, Long> {
-
     Optional<StudentOrg> findByUsers_UserId(Long userId);
+    boolean existsByUsers_UserId(Long userId);
 
-    /**
-     * 협업 이력이 있는 단체만 불러오고,
-     * 검색어 / 협업유형 / 단체유형 필터를 적용하는 커스텀 조회
-     */
     @Query("""
     SELECT DISTINCT o
     FROM StudentOrg o

@@ -14,6 +14,9 @@ public class Industry {
     @Column(name = "industry_id")
     private Long industryId;
 
-    @Column(name = "name", length = 50)
-    private String name;
+    @Column(name = "industry_name", length = 100)
+    private String industryName;
+
+    @Column(name = "description", columnDefinition = "text")
+    private String description;
 }

@@ -41,7 +41,7 @@ public class ReportAccessValidator {
         }
         // principal = CustomUser일 때
         else if (principal instanceof CustomUser customUser) {
-            loginUserId = customUser.getUsersId();
+            loginUserId = customUser.getUserId();
         }
         else {
             throw new SecurityException("인증되지 않은 사용자입니다.");

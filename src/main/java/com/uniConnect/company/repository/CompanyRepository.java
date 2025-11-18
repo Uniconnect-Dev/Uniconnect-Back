@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CompanyRepository extends JpaRepository<Company, Long> {
 
@@ -15,4 +16,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
         LEFT JOIN FETCH CompanyProfile p ON p.company.companyId = c.companyId
         """)
     List<Company> findAllWithProfileAndIndustry();
+
+    Optional<Company> findByUsers_UserId(Long userId);
+    boolean existsByUsers_UserId(Long userId);
 }
