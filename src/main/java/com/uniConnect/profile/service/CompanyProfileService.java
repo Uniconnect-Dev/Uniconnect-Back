@@ -27,7 +27,7 @@ public class CompanyProfileService {
     @Transactional
     public CompanyGetResponse initProfile(Long userId, CompanyInitRequest request) {
         // 이미 프로필이 있는지 확인
-        if (companyRepository.existsByUser_UserId(userId)) {
+        if (companyRepository.existsByUsers_UserId(userId)) {
             throw new CustomException(ErrorCode.ALREADY_EXISTS);
         }
 
@@ -47,9 +47,11 @@ public class CompanyProfileService {
                 .brandName(request.getBrandName())
                 .logoUrl(request.getLogoUrl())
                 .mainContactId(request.getMainContactId())
-                .user(user)
                 .industry(industry)
                 .build();
+
+        company.getUsers().add(user);
+        user.setCompany(company);
 
         Company saved = companyRepository.save(company);
         return toResponse(saved);

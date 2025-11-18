@@ -4,6 +4,8 @@ import com.uniConnect.common.entity.BaseEntity;
 import com.uniConnect.member.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.List;
+import java.util.ArrayList;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
@@ -27,9 +29,8 @@ public class Company extends BaseEntity {
     private Long mainContactId; // 필요 시 연관관계로 교체 가능
 
     // relations
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL)
+    private List<User> users = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "industry_id")

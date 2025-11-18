@@ -9,6 +9,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.List;
+import com.uniConnect.company.entity.Company;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -61,6 +63,10 @@ public class User implements UserDetails {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_org_id")
     private StudentOrg studentOrg;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private Company company;
 
     // ===== UserDetails 구현부 =====
 
