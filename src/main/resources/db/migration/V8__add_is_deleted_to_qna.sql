@@ -1,0 +1,2 @@
+ALTER TABLE qna_questions
+ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
