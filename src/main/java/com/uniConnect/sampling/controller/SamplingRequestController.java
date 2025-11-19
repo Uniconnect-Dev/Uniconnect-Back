@@ -273,4 +273,20 @@ public class SamplingRequestController {
     public ApiResponse<FeeResponse> getSamplingFees() {
         return ApiResponse.success(requestService.getFeeInformation());
     }
+
+    @Operation(
+            summary = "학생단체 매칭 요청 제출",
+            description = """
+        학생단체가 기업에게 매칭 요청을 제출합니다.
+        요청이 성공하면 상태는 MatchingRequested로 변경되며,
+        '담당자 확인 후 단체 페이지를 통해 매칭 여부 전달' 메시지가 반환됩니다.
+        """
+    )
+    @PostMapping("/{id}/match/request")
+    public ApiResponse<String> requestMatching(@PathVariable Long id) {
+        requestService.requestMatching(id);
+        return ApiResponse.success(
+                "UNI:CONNECT를 이용해주셔서 감사드립니다. 담당자 확인 후 단체 페이지를 통해 매칭 여부 전달드리겠습니다. (평균 24시간 소요됩니다.)"
+        );
+    }
 }

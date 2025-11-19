@@ -4,6 +4,9 @@ public enum SamplingStatus {
     // 요청 단계
     Draft,           // 학생단체가 초안 생성
     Submitted,       // 요청서 제출 (관리자 검토 대기)
+
+    MatchingRequested,   // 학생단체가 매칭 요청 제출
+
     Approved,        // 요청 승인 (계약 진행 가능)
     Rejected,        // 요청 반려
 

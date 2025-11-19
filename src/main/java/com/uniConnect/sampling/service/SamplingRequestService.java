@@ -237,4 +237,16 @@ public class SamplingRequestService {
         return requestRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("요청을 찾을 수 없습니다."));
     }
+
+    /** 학생단체가 기업 매칭 요청을 승인(완료) */
+    public void requestMatching(Long id) {
+        SamplingRequest req = findById(id);
+
+        if (req.getStatus() != SamplingStatus.Submitted &&
+                req.getStatus() != SamplingStatus.Approved) {
+            throw new IllegalStateException("매칭 요청은 제출된 상태에서만 가능합니다.");
+        }
+
+        req.setStatus(SamplingStatus.MatchingRequested);
+    }
 }
