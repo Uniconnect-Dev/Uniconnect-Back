@@ -31,4 +31,13 @@ public interface StudentOrgRepository extends JpaRepository<StudentOrg, Long> {
             @Param("collabType") CollaborationType collabType,
             @Param("orgType") OrganizationType orgType
     );
+
+    @Query("""
+    SELECT DISTINCT o
+    FROM StudentOrg o
+    LEFT JOIN FETCH o.keywords k
+    LEFT JOIN FETCH k.hashtag h
+    LEFT JOIN FETCH o.availabilities av
+    """)
+    List<StudentOrg> findAllWithKeywordsAndAvailabilities();
 }

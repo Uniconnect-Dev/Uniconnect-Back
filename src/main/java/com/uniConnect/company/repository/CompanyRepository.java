@@ -17,6 +17,13 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
         """)
     List<Company> findAllWithProfileAndIndustry();
 
+    @Query("""
+        SELECT DISTINCT c
+        FROM Company c
+        LEFT JOIN FETCH c.users u
+    """)
+    List<Company> findAllWithUsers();
+
     Optional<Company> findByUsers_UserId(Long userId);
     boolean existsByUsers_UserId(Long userId);
 }
