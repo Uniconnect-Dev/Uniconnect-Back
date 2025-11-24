@@ -37,13 +37,15 @@ public class CollaborationMatchQueryService {
     }
 
     private String getOrgName(Long studentOrgId) {
-        // TODO: StudentOrgRepository 연결
-        return "학생단체명";
+        return studentOrgRepository.findById(studentOrgId)
+                .map(StudentOrg::getOrganizationName)
+                .orElse("알 수 없음");
     }
 
     private String getCompanyName(Long companyId) {
-        // TODO: CompanyRepository 연결
-        return "기업명";
+        return companyRepository.findById(companyId)
+                .map(Company::getBrandName)
+                .orElse("알 수 없음");
     }
 
     // ============================
@@ -74,6 +76,7 @@ public class CollaborationMatchQueryService {
 
         return repo.findByStudentOrgId(studentOrgId)
                 .stream()
+                .filter(m -> m.getStudentOrgId().equals(studentOrgId))
                 .map(m -> MatchSentItemResponse.builder()
                         .matchId(m.getId())
                         .targetId(m.getCompanyId())
@@ -93,7 +96,7 @@ public class CollaborationMatchQueryService {
     // ============================
     public List<MatchReceivedItemResponse> getStudentOrgReceivedList(Long studentOrgId) {
 
-        return repo.findByCompanyId(studentOrgId) // 기업이 아니라 학생단체에게 온 요청
+        return repo.findByStudentOrgId(studentOrgId)
                 .stream()
                 .map(m -> MatchReceivedItemResponse.builder()
                         .matchId(m.getId())
@@ -108,7 +111,7 @@ public class CollaborationMatchQueryService {
     }
 
     // ============================
-    // 기업 버전도 동일하게 구현
+    // 기업 버전
     // ============================
     public MatchStatusSummaryResponse getCompanySummary(Long companyId) {
 
@@ -145,9 +148,14 @@ public class CollaborationMatchQueryService {
                 .toList();
     }
 
+
+    // ============================
+    // 기업: 받은 매칭 목록
+    // ============================
+
     public List<MatchReceivedItemResponse> getCompanyReceivedList(Long companyId) {
 
-        return repo.findByCompanyId(companyId)
+        return repo.findByCompanyId(companyId)  // ✔ receiver = company
                 .stream()
                 .map(m -> MatchReceivedItemResponse.builder()
                         .matchId(m.getId())
