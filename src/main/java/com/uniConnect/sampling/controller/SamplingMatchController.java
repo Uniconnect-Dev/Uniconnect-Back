@@ -57,7 +57,7 @@ public class SamplingMatchController {
         );
     }
 
-    @Operation(summary = "매칭 요청하기", description = "기업이 타깃 키워드 선택을 완료하고 매칭 요청을 제출합니다.")
+    @Operation(summary = "매칭 마무리", description = "기업이 타깃 키워드 선택을 완료하고 매칭 요청을 제출합니다.")
     @PostMapping("/submit")
     public ApiResponse<SamplingMatchSubmitResponse> submitMatch(@RequestBody SamplingMatchRequestDto dto) {
         SamplingMatchSubmitResponse response = matchService.submitSamplingMatch(dto);
