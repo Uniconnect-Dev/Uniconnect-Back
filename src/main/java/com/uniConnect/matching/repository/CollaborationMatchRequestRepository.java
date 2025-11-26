@@ -3,6 +3,8 @@ package com.uniConnect.matching.repository;
 import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import com.uniConnect.campaign.enums.MatchingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -20,4 +22,8 @@ public interface CollaborationMatchRequestRepository extends JpaRepository<Colla
 
     // 받은 요청 (역방향)
     List<CollaborationMatchRequest> findByCompanyIdAndStatus(Long companyId, MatchingStatus status);
+
+    Page<CollaborationMatchRequest> findByStudentOrgId(Long studentOrgId, Pageable pageable);
+
+    Page<CollaborationMatchRequest> findByCompanyId(Long companyId, Pageable pageable);
 }

@@ -38,19 +38,45 @@ public class CollaborationMatchQueryController {
     @GetMapping("/student/sent")
     @Operation(summary = "학생단체 - 내가 요청한 매칭 목록")
     public ApiResponse<List<MatchSentItemResponse>> studentSent(
-            @AuthenticationPrincipal CustomUser user
+            @AuthenticationPrincipal CustomUser user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         Long studentOrgId = getStudentOrgId(user);
-        return ApiResponse.success(service.getStudentOrgSentList(studentOrgId));
+        return ApiResponse.success(service.getStudentOrgSentList(studentOrgId, page, size));
     }
 
     @GetMapping("/student/received")
     @Operation(summary = "학생단체 - 받은 매칭 목록")
     public ApiResponse<List<MatchReceivedItemResponse>> studentReceived(
-            @AuthenticationPrincipal CustomUser user
+            @AuthenticationPrincipal CustomUser user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         Long studentOrgId = getStudentOrgId(user);
-        return ApiResponse.success(service.getStudentOrgReceivedList(studentOrgId));
+        return ApiResponse.success(service.getStudentOrgReceivedList(studentOrgId, page, size));
+    }
+
+    @PostMapping("/student/{matchId}/approve")
+    @Operation(summary = "학생단체 - 매칭 요청 승인")
+    public ApiResponse<String> approveMatchByStudent(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable Long matchId
+    ) {
+        Long studentOrgId = getStudentOrgId(user);
+        service.approveMatchByStudent(studentOrgId, matchId);
+        return ApiResponse.success("학생단체가 매칭을 승인했습니다.");
+    }
+
+    @PostMapping("/student/{matchId}/reject")
+    @Operation(summary = "학생단체 - 매칭 요청 거절")
+    public ApiResponse<String> rejectMatchByStudent(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable Long matchId
+    ) {
+        Long studentOrgId = getStudentOrgId(user);
+        service.rejectMatchByStudent(studentOrgId, matchId);
+        return ApiResponse.success("학생단체가 매칭을 거절했습니다.");
     }
 
     // ===============================
@@ -69,20 +95,47 @@ public class CollaborationMatchQueryController {
     @GetMapping("/company/sent")
     @Operation(summary = "기업 - 내가 요청한 매칭 목록")
     public ApiResponse<List<MatchSentItemResponse>> companySent(
-            @AuthenticationPrincipal CustomUser user
+            @AuthenticationPrincipal CustomUser user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         Long companyId = getCompanyId(user);
-        return ApiResponse.success(service.getCompanySentList(companyId));
+        return ApiResponse.success(service.getCompanySentList(companyId, page, size));
     }
 
     @GetMapping("/company/received")
     @Operation(summary = "기업 - 받은 매칭 목록")
     public ApiResponse<List<MatchReceivedItemResponse>> companyReceived(
-            @AuthenticationPrincipal CustomUser user
+            @AuthenticationPrincipal CustomUser user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         Long companyId = getCompanyId(user);
-        return ApiResponse.success(service.getCompanyReceivedList(companyId));
+        return ApiResponse.success(service.getCompanyReceivedList(companyId, page, size));
     }
+
+    @PostMapping("/company/{matchId}/approve")
+    @Operation(summary = "기업 - 매칭 요청 승인")
+    public ApiResponse<String> approveMatchByCompany(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable Long matchId
+    ) {
+        Long companyId = getCompanyId(user);
+        service.approveMatchByCompany(companyId, matchId);
+        return ApiResponse.success("기업이 매칭을 승인했습니다.");
+    }
+
+    @PostMapping("/company/{matchId}/reject")
+    @Operation(summary = "기업 - 매칭 요청 거절")
+    public ApiResponse<String> rejectMatchByCompany(
+            @AuthenticationPrincipal CustomUser user,
+            @PathVariable Long matchId
+    ) {
+        Long companyId = getCompanyId(user);
+        service.rejectMatchByCompany(companyId, matchId);
+        return ApiResponse.success("기업이 매칭을 거절했습니다.");
+    }
+
 
     // ===============================
     // 내부 공통 메서드

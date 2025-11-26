@@ -12,6 +12,8 @@ import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import com.uniConnect.matching.repository.CollaborationMatchRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
@@ -72,11 +74,12 @@ public class CollaborationMatchQueryService {
     // ============================
     // 2) 학생단체: 내가 보낸 매칭 목록
     // ============================
-    public List<MatchSentItemResponse> getStudentOrgSentList(Long studentOrgId) {
+    public List<MatchSentItemResponse> getStudentOrgSentList(Long studentOrgId, int page, int size) {
 
-        return repo.findByStudentOrgId(studentOrgId)
+        Pageable pageable = PageRequest.of(page, size);
+
+        return repo.findByStudentOrgId(studentOrgId, pageable)
                 .stream()
-                .filter(m -> m.getStudentOrgId().equals(studentOrgId))
                 .map(m -> MatchSentItemResponse.builder()
                         .matchId(m.getId())
                         .targetId(m.getCompanyId())
@@ -94,9 +97,11 @@ public class CollaborationMatchQueryService {
     // ============================
     // 3) 학생단체: 받은 매칭 목록
     // ============================
-    public List<MatchReceivedItemResponse> getStudentOrgReceivedList(Long studentOrgId) {
+    public List<MatchReceivedItemResponse> getStudentOrgReceivedList(Long studentOrgId, int page, int size) {
 
-        return repo.findByStudentOrgId(studentOrgId)
+        Pageable pageable = PageRequest.of(page, size);
+
+        return repo.findByStudentOrgId(studentOrgId, pageable)
                 .stream()
                 .map(m -> MatchReceivedItemResponse.builder()
                         .matchId(m.getId())
@@ -109,6 +114,41 @@ public class CollaborationMatchQueryService {
                         .build())
                 .toList();
     }
+
+    public void approveMatchByStudent(Long studentOrgId, Long matchId) {
+        CollaborationMatchRequest match = repo.findById(matchId)
+                .orElseThrow(() -> new RuntimeException("매칭을 찾을 수 없습니다. id=" + matchId));
+
+        if (!match.getStudentOrgId().equals(studentOrgId)) {
+            throw new RuntimeException("해당 매칭을 승인할 권한이 없습니다.");
+        }
+
+        if (match.getStatus() != MatchingStatus.Requested) {
+            throw new RuntimeException("이미 승인 또는 거절된 매칭입니다.");
+        }
+
+        match.setStatus(MatchingStatus.Approved);
+        match.setRespondedAt(java.time.LocalDateTime.now());
+        repo.save(match);
+    }
+
+    public void rejectMatchByStudent(Long studentOrgId, Long matchId) {
+        CollaborationMatchRequest match = repo.findById(matchId)
+                .orElseThrow(() -> new RuntimeException("매칭을 찾을 수 없습니다. id=" + matchId));
+
+        if (!match.getStudentOrgId().equals(studentOrgId)) {
+            throw new RuntimeException("해당 매칭을 거절할 권한이 없습니다.");
+        }
+
+        if (match.getStatus() != MatchingStatus.Requested) {
+            throw new RuntimeException("이미 승인 또는 거절된 매칭입니다.");
+        }
+
+        match.setStatus(MatchingStatus.Rejected);
+        match.setRespondedAt(java.time.LocalDateTime.now());
+        repo.save(match);
+    }
+
 
     // ============================
     // 기업 버전
@@ -130,9 +170,11 @@ public class CollaborationMatchQueryService {
                 .build();
     }
 
-    public List<MatchSentItemResponse> getCompanySentList(Long companyId) {
+    public List<MatchSentItemResponse> getCompanySentList(Long companyId, int page, int size) {
 
-        return repo.findByCompanyId(companyId)
+        Pageable pageable = PageRequest.of(page, size);
+
+        return repo.findByCompanyId(companyId, pageable)
                 .stream()
                 .map(m -> MatchSentItemResponse.builder()
                         .matchId(m.getId())
@@ -153,9 +195,11 @@ public class CollaborationMatchQueryService {
     // 기업: 받은 매칭 목록
     // ============================
 
-    public List<MatchReceivedItemResponse> getCompanyReceivedList(Long companyId) {
+    public List<MatchReceivedItemResponse> getCompanyReceivedList(Long companyId, int page, int size) {
 
-        return repo.findByCompanyId(companyId)  // ✔ receiver = company
+        Pageable pageable = PageRequest.of(page, size);
+
+        return repo.findByCompanyId(companyId, pageable)
                 .stream()
                 .map(m -> MatchReceivedItemResponse.builder()
                         .matchId(m.getId())
@@ -165,8 +209,42 @@ public class CollaborationMatchQueryService {
                         .collaborationType(m.getCollaborationType())
                         .desiredDate(m.getDesiredDate())
                         .requestedAt(m.getRequestedAt())
-                        .build()
-                )
+                        .build())
                 .toList();
     }
+
+    public void approveMatchByCompany(Long companyId, Long matchId) {
+        CollaborationMatchRequest match = repo.findById(matchId)
+                .orElseThrow(() -> new RuntimeException("매칭을 찾을 수 없습니다. id=" + matchId));
+
+        if (!match.getCompanyId().equals(companyId)) {
+            throw new RuntimeException("해당 매칭을 승인할 권한이 없습니다.");
+        }
+
+        if (match.getStatus() != MatchingStatus.Requested) {
+            throw new RuntimeException("이미 승인 또는 거절된 매칭입니다.");
+        }
+
+        match.setStatus(MatchingStatus.Approved);
+        match.setRespondedAt(java.time.LocalDateTime.now());
+        repo.save(match);
+    }
+
+    public void rejectMatchByCompany(Long companyId, Long matchId) {
+        CollaborationMatchRequest match = repo.findById(matchId)
+                .orElseThrow(() -> new RuntimeException("매칭을 찾을 수 없습니다. id=" + matchId));
+
+        if (!match.getCompanyId().equals(companyId)) {
+            throw new RuntimeException("해당 매칭을 거절할 권한이 없습니다.");
+        }
+
+        if (match.getStatus() != MatchingStatus.Requested) {
+            throw new RuntimeException("이미 승인 또는 거절된 매칭입니다.");
+        }
+
+        match.setStatus(MatchingStatus.Rejected);
+        match.setRespondedAt(java.time.LocalDateTime.now());
+        repo.save(match);
+    }
+
 }
