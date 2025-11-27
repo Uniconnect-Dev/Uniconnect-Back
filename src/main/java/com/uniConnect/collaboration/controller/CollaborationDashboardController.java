@@ -13,10 +13,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import org.springframework.web.bind.annotation.RequestBody;
+
 import org.springframework.web.multipart.MultipartFile;
 import com.uniConnect.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -43,20 +45,23 @@ public class CollaborationDashboardController {
     @Operation(summary = "협업 대시보드 조회", description = "기업/학생단체 공용 협업 대시보드를 조회합니다.")
     @GetMapping("/{collaborationId}/dashboard")
     public ApiResponse<CollaborationDashboardResponse> getDashboard(
-            @PathVariable Long collaborationId
+            @PathVariable Long collaborationId,
+            HttpServletRequest request
     ) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String loginId = authentication.getName();
+        String token = jwtUtil.resolveToken(request);
 
-        var credential = localCredentialRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new IllegalArgumentException("로그인 아이디에 해당하는 사용자를 찾을 수 없습니다: " + loginId));
+        Claims claims = jwtUtil.parseClaims(token);
 
-        User user = credential.getUser();
+        Long userId = Long.valueOf(claims.get("userId").toString());
+        String role = claims.get("role").toString();
 
-        CollaborationDashboardResponse dashboard =
-                dashboardService.getDashboard(collaborationId, user.getUserId(), user.getRole().name());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다: " + userId));
 
-        return ApiResponse.success("협업 대시보드 조회 성공", dashboard);
+        CollaborationDashboardResponse response =
+                dashboardService.getDashboard(collaborationId, userId, role);
+
+        return ApiResponse.success("대시보드 조회 성공", response);
     }
 
     // 기업: 제품 정보 등록
@@ -66,9 +71,15 @@ public class CollaborationDashboardController {
     )
     @PostMapping("/company/product-info")
     public ResponseEntity<ProductInfoResponse> addProductInfo(
-            @RequestBody ProductInfoRequest request
+            @RequestBody ProductInfoRequest request,
+            @AuthenticationPrincipal CustomUser user
     ) {
-        ProductInfoResponse response = dashboardService.addOrUpdateProductInfo(request);
+        Long companyUserId = user.getUserId(); // JWT에서 userId 추출
+
+        ProductInfoResponse response = dashboardService.addOrUpdateProductInfo(
+                request,
+                companyUserId
+        );
         return ResponseEntity.ok(response);
     }
 

@@ -8,6 +8,7 @@ import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.common.service.FileStorageService;
 import com.uniConnect.campaign.repository.MatchingRequestRepository;
 import com.uniConnect.member.enums.UserRole;
+import com.uniConnect.company.entity.Company;
 import com.uniConnect.global.exception.ErrorCode;
 import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.s3.S3FileService;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.time.LocalDateTime;
@@ -47,15 +49,44 @@ public class CollaborationDashboardService {
                 .orElseThrow(() -> new IllegalArgumentException("Collaboration not found: " + collaborationId));
     }
 
+    private void validateCompanyOwnership(Collaboration collab, Long companyUserId) {
+        if (companyUserId == null) {
+            throw new AccessDeniedException("인증 정보가 없습니다.");
+        }
+
+        // 1) Collaboration → MatchingRequest
+        var matching = collab.getMatching();
+        if (matching == null || matching.getCampaign() == null) {
+            throw new AccessDeniedException("매칭 정보가 올바르지 않습니다.");
+        }
+
+        // 2) matching → campaign → company
+        var company = matching.getCampaign().getCompany();
+        if (company == null) {
+            throw new AccessDeniedException("기업 정보가 존재하지 않습니다.");
+        }
+
+        // 3) company → users 목록에서 userId 찾기
+        boolean isOwner = company.getUsers().stream()
+                .anyMatch(u -> u.getUserId().equals(companyUserId));
+
+        if (!isOwner) {
+            throw new AccessDeniedException("해당 기업의 사용자만 접근 가능합니다.");
+        }
+    }
+
     // 1. 기업: 제품 정보 입력
-    public ProductInfoResponse addOrUpdateProductInfo(ProductInfoRequest req) {
-        Collaboration collab = getCollabOrThrow(req.getCollaborationId());
+    public ProductInfoResponse addOrUpdateProductInfo(ProductInfoRequest request, Long companyUserId) {
+        Collaboration collab = getCollabOrThrow(request.getCollaborationId());
+
+        // 회사 권한 검증 (matchingRequest → campaign → company → user)
+        validateCompanyOwnership(collab, companyUserId);
 
         ProductInfo info = ProductInfo.builder()
                 .collaboration(collab)
-                .productName(req.getProductName())
-                .quantity(req.getQuantity())
-                .description(req.getDescription())
+                .productName(request.getProductName())
+                .quantity(request.getQuantity())
+                .description(request.getDescription())
                 .providedBy(UploaderType.Company)
                 .isShipped(false)
                 .build();
@@ -67,6 +98,8 @@ public class CollaborationDashboardService {
 
         return ProductInfoResponse.from(saved);
     }
+
+
 
     // 2. 기업: 배송 정보 입력 (발송일/운송장/발송여부)
     public ProductInfoResponse updateShippingInfo(ShippingInfoRequest req) {
@@ -180,9 +213,17 @@ public class CollaborationDashboardService {
     // 6. 기업: 날짜 픽스
     public TaskResponse fixEventDate(DateFixRequest req) {
         Collaboration collab = getCollabOrThrow(req.getCollaborationId());
-        CollaborationTask task = upsertTaskStatus(collab, TaskType.ProductInfo,
-                TaskStatus.Pending, "Company", req.getEventDate());
+
+        CollaborationTask task = upsertTaskStatus(
+                collab,
+                TaskType.EventDateFix,
+                TaskStatus.Pending,
+                "Company",
+                req.getEventDate()
+        );
+
         collab.setStatus(CollaborationStatus.InProgress);
+
         return TaskResponse.from(task);
     }
 
@@ -214,13 +255,34 @@ public class CollaborationDashboardService {
     // 협업 대시보드 조회(학생단체 & 기업 공용)
     @Transactional(readOnly = true)
     public CollaborationDashboardResponse getDashboard(Long collaborationId, Long userId, String role) {
+
         Collaboration collab = collaborationRepository.findById(collaborationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
 
-        boolean hasAccess = matchingRequestRepository.existsByMatchingIdAndStudentOrgUsers(
-                collab.getMatching().getMatchingId(),
-                userId
-        );
+        Long matchingId = collab.getMatching().getMatchingId();
+
+        boolean hasAccess = false;
+
+        // 학생단체 접근 검증
+        if (role.equals("StudentOrg")) {
+            hasAccess = matchingRequestRepository.existsByMatchingIdAndStudentOrgUsers(
+                    matchingId,
+                    userId
+            );
+        }
+
+        // 기업 접근 검증
+        else if (role.equals("Company")) {
+            hasAccess = matchingRequestRepository.existsByMatchingIdAndCompanyUsers(
+                    matchingId,
+                    userId
+            );
+        }
+
+        // 그 외 (Admin 등)
+        else if (role.equals("Admin")) {
+            hasAccess = true; // 필요하면 추가 검증
+        }
 
         if (!hasAccess) {
             throw new CustomException(ErrorCode.FORBIDDEN);
@@ -231,6 +293,8 @@ public class CollaborationDashboardService {
         List<ContentUpload> uploads = contentUploadRepository.findByCollaboration(collab);
         List<ReceiptConfirmation> receipts = receiptRepository.findByCollaboration(collab);
 
-        return CollaborationDashboardResponse.from(collab, tasks, products, uploads, receipts, role);
+        return CollaborationDashboardResponse.from(
+                collab, tasks, products, uploads, receipts, role
+        );
     }
 }

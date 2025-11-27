@@ -21,4 +21,18 @@ public interface MatchingRequestRepository extends JpaRepository<MatchingRequest
             @Param("matchingId") Long matchingId,
             @Param("userId") Long userId
     );
+
+    @Query("""
+    SELECT CASE WHEN COUNT(m) > 0 THEN true ELSE false END
+    FROM MatchingRequest m
+    JOIN m.campaign c
+    JOIN c.company comp
+    JOIN comp.users u
+    WHERE m.matchingId = :matchingId
+      AND u.userId = :userId
+""")
+    boolean existsByMatchingIdAndCompanyUsers(
+            @Param("matchingId") Long matchingId,
+            @Param("userId") Long userId
+    );
 }
