@@ -55,7 +55,6 @@ public class StudentOrg {
 
     // relation
     @OneToMany(mappedBy = "studentOrg", cascade = CascadeType.ALL)
-    @Builder.Default
     private List<User> users = new ArrayList<>();
 
     @OneToMany(mappedBy = "studentOrg", cascade = CascadeType.ALL, orphanRemoval = true)
