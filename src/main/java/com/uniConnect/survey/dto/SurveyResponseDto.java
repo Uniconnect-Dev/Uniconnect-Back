@@ -21,9 +21,15 @@ public class SurveyResponseDto {
     private LocalDateTime updatedAt;
 
     public static SurveyResponseDto fromEntity(Survey s) {
+
+        Long orgId = null;
+        if (s.getStudentOrg() != null) {
+            orgId = s.getStudentOrg().getStudentOrgId();
+        }
+
         return SurveyResponseDto.builder()
                 .surveyId(s.getSurveyId())
-                .studentOrgId(s.getStudentOrg().getStudentOrgId())
+                .studentOrgId(orgId)
                 .title(s.getTitle())
                 .description(s.getDescription())
                 .externalLink(s.getExternalLink())
