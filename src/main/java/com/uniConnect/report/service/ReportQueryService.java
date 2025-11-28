@@ -20,15 +20,19 @@ import com.uniConnect.report.enums.SamplingReportStatus;
 import com.uniConnect.report.repository.SamplingReportRepository;
 import com.uniConnect.member.entity.User;
 import com.uniConnect.member.repository.UserRepository;
-
+import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ReportQueryService {
 
-    private final UserRepository userRepository;
     private final SamplingReportRepository samplingReportRepository;
     private final ObjectMapper objectMapper;
+    private LocalDate startAt;
+    private LocalDate endAt;
+
 
     private Map<String, Object> parseJsonMap(String json) {
         if (json == null) return new HashMap<>();
@@ -57,26 +61,18 @@ public class ReportQueryService {
         }
     }
 
-    public Long findUserIdByLoginId(String loginId) {
-        return userRepository.findByUsername(loginId)
-                .map(User::getUserId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
-    }
 
+    // ==============================
+    //  리포트 목록 조회 (기업 전용)
+    // ==============================
     public List<ReportListResponseDto> getReportList(
             Long userId,
-            String status,
             LocalDate startDate,
             LocalDate endDate,
             int page,
             int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-
-        SamplingReportStatus statusEnum = null;
-        if (status != null && !status.isBlank()) {
-            statusEnum = SamplingReportStatus.valueOf(status);
-        }
 
         LocalDateTime start = (startDate != null)
                 ? startDate.atStartOfDay()
@@ -86,49 +82,61 @@ public class ReportQueryService {
                 ? endDate.atTime(23, 59, 59)
                 : LocalDateTime.of(2100, 12, 31, 23, 59);
 
-        Page<SamplingReport> reports = samplingReportRepository.findReports(
-                userId, statusEnum, start, end, pageable
-        );
+        Page<SamplingReport> reports =
+                samplingReportRepository.findReportsByCompanyUserId(
+                        userId, start, end, pageable
+                );
 
         return reports.stream()
-                .map(r -> ReportListResponseDto.builder()
-                        .reportId(r.getReportId())
-                        .eventName(r.getEventName())
-                        .brandName(r.getBrandName())
-                        .productName(r.getProductName())
-                        .createdAt(r.getCreatedAt())
-                        .status(r.getStatus().name())
-                        .build()
-                )
-                .toList();
+                .map(r -> {
+                    var c = r.getCampaign();
+
+                    return ReportListResponseDto.builder()
+                            .reportId(r.getReportId())
+                            .eventName(c.getName())
+                            .productName(c.getProductName())
+                            .brandName(c.getBrandName())
+                            .createdAt(r.getCreatedAt())
+                            .organizationName(c.getStudentOrg().getOrganizationName())
+                            .hasPdf(r.getReportPdfUrl() != null)
+                            .status(r.getStatus().name())
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
+
+    // ==============================
+    //  리포트 상세 조회
+    // ==============================
     public ReportDetailResponseDto getReportDetail(Long reportId) {
 
         SamplingReport report = samplingReportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("리포트를 찾을 수 없습니다."));
 
+        var campaign = report.getCampaign();
+
         return ReportDetailResponseDto.builder()
                 .basicInfo(
                         ReportDetailResponseDto.BasicInfo.builder()
-                                .eventTitle(report.getEventName())
-                                .brandName(report.getBrandName())
-                                .productName(report.getProductName())
+                                .eventTitle(campaign.getName())
+                                .brandName(campaign.getBrandName())
+                                .productName(campaign.getProductName())
                                 .period(
                                         ReportDetailResponseDto.Period.builder()
-                                                .startAt(report.getPeriod())  // 엔티티에 맞춤
-                                                .endAt(null)
+                                                .startAt(campaign.getStartDate())
+                                                .endAt(campaign.getEndDate())
                                                 .build()
                                 )
-                                .location(report.getLocation())
-                                .targetDesc(report.getTarget())
-                                .plannedQuantity(report.getTotalQuantity())
-                                .distributedQuantity(report.getDistributedQuantity())
+                                .location(campaign.getLocationName())
+                                .targetDesc(campaign.getTargetDesc())
+                                .plannedQuantity(campaign.getProductQuantity())
+                                .distributedQuantity(campaign.getDistributedQuantity())
                                 .cost(
                                         ReportDetailResponseDto.Cost.builder()
-                                                .laborCost(null)
-                                                .etcCost(null)
-                                                .totalCost(report.getBillingTotal())
+                                                .laborCost(campaign.getLaborCost())
+                                                .etcCost(campaign.getEtcCost())
+                                                .totalCost(campaign.getTotalCost())
                                                 .build()
                                 )
                                 .build()

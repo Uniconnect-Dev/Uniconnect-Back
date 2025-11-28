@@ -18,5 +18,7 @@ public class ReportListResponseDto {
     private String brandName;
     private String productName;
     private LocalDateTime createdAt;
+    private String organizationName;
+    private boolean hasPdf;
     private String status;
 }

@@ -11,21 +11,41 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 
 public interface SamplingReportRepository extends JpaRepository<SamplingReport, Long>, SamplingReportRepositoryCustom {
+
     @Query("""
-select r from SamplingReport r
-join r.campaign c
-join c.studentOrg so
-join so.users u
-where u.userId = :userId
-  and (r.status = coalesce(:status, r.status))
-  and (r.createdAt >= coalesce(:start, r.createdAt))
-  and (r.createdAt <= coalesce(:end, r.createdAt))
-""")
+        SELECT sr
+        FROM SamplingReport sr
+        JOIN sr.campaign c
+        JOIN c.company comp
+        JOIN comp.users u
+        WHERE u.userId = :userId
+        AND (:status IS NULL OR sr.status = :status)
+        AND sr.createdAt BETWEEN :start AND :end
+        ORDER BY sr.createdAt DESC
+    """)
     Page<SamplingReport> findReports(
-            Long userId,
-            SamplingReportStatus status,
-            LocalDateTime start,
-            LocalDateTime end,
+            @Param("userId") Long userId,
+            @Param("status") SamplingReportStatus status,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            Pageable pageable
+    );
+
+
+    @Query("""
+        SELECT sr
+        FROM SamplingReport sr
+        JOIN sr.campaign c
+        JOIN c.company comp
+        JOIN comp.users u
+        WHERE u.userId = :userId
+        AND sr.createdAt BETWEEN :start AND :end
+        ORDER BY sr.createdAt DESC
+    """)
+    Page<SamplingReport> findReportsByCompanyUserId(
+            @Param("userId") Long userId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
             Pageable pageable
     );
 }
