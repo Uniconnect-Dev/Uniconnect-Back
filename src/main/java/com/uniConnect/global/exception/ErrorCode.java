@@ -19,6 +19,11 @@ public enum ErrorCode {
     // 계약서 관련
     CONTRACT_NOT_FOUND(HttpStatus.NOT_FOUND, "계약서를 찾을 수 없습니다."),
     CONTRACT_ALREADY_SIGNED(HttpStatus.BAD_REQUEST, "이미 서명된 계약서입니다."),
+    CONTRACT_NOT_APPROVED(HttpStatus.BAD_REQUEST, "관리자가 아직 승인하지 않은 계약입니다."),
+    CONTRACT_NOT_SIGNED_YET(HttpStatus.BAD_REQUEST, "계약서 서명이 먼저 필요합니다."),
+    RECEIPT_ALREADY_SIGNED(HttpStatus.BAD_REQUEST, "이미 인수증 서명이 완료되었습니다."),
+    INVALID_RECEIPT_STATUS(HttpStatus.BAD_REQUEST, "현재 상태에서는 인수증 서명을 할 수 없습니다."),
+
 
     // 리소스 관련
     ENTITY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 데이터입니다."),
@@ -56,6 +61,7 @@ public enum ErrorCode {
     // 전자서명 관련
     SIGNATURE_EXPIRED(HttpStatus.BAD_REQUEST, "서명 시간이 만료되었습니다."),
     INVALID_SIGNATURE(HttpStatus.BAD_REQUEST, "서명 검증에 실패했습니다.");
+
 
     private final HttpStatus status;
     private final String message;
