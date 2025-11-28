@@ -75,6 +75,20 @@ public class SamplingRequest {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(length = 50)
+    private String companyIndustry;   // 기업 산업군
+
+    @Column(columnDefinition = "TEXT")
+    private String samplingPurpose;   // 샘플링 목적
+
+    private LocalDate samplingStartDate; // 샘플링 시작일
+    private LocalDate samplingEndDate;   // 샘플링 종료일
+
+    @Column(length = 100)
+    private String productName;  // 제품/서비스명
+
+    private Integer productCount; // 제품 개수
+
     @OneToMany(mappedBy = "samplingRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SamplingTargetSelection> selections = new ArrayList<>();
 
