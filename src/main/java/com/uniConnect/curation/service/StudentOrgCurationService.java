@@ -37,8 +37,8 @@ public class StudentOrgCurationService {
         }
         System.out.println("==== CURATION DEBUG END ====");
         return allGroups.stream()
-                .filter(org -> !Boolean.TRUE.equals(org.getSafetyFlag()))
-                .filter(org -> org.getVerificationLevel() != null && org.getVerificationLevel() >= 2)
+                //.filter(org -> !Boolean.TRUE.equals(org.getSafetyFlag()))
+                //.filter(org -> org.getVerificationLevel() != null && org.getVerificationLevel() >= 2)
                 .map(org -> toResponse(org, req))
                 .filter(resp -> resp.getMatchingScore() > 0)
                 .sorted(Comparator.comparingDouble(StudentOrgCurationResponse::getMatchingScore).reversed())

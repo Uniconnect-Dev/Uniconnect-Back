@@ -89,12 +89,22 @@ public class SamplingRequest {
 
     private Integer productCount; // 제품 개수
 
+    @Builder.Default
     @OneToMany(mappedBy = "samplingRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SamplingTargetSelection> selections = new ArrayList<>();
 
     public void addSelection(SamplingTargetSelection selection) {
         this.selections.add(selection);
         selection.setSamplingRequest(this);
+    }
+
+    @Builder.Default
+    @OneToMany(mappedBy = "samplingRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SamplingMatchedOrg> matchedOrgs = new ArrayList<>();
+
+    public void addMatchedOrg(SamplingMatchedOrg matched) {
+        matched.setSamplingRequest(this);
+        this.matchedOrgs.add(matched);
     }
 
     @PrePersist

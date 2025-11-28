@@ -3,64 +3,98 @@ package com.uniConnect.sampling.controller;
 import com.uniConnect.global.response.ApiResponse;
 import com.uniConnect.sampling.dto.*;
 import com.uniConnect.sampling.service.SamplingMatchService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/sampling/match")
-@Tag(name = "SamplingMatch", description = "기업용 학생단체 매칭 API")
+@Tag(name = "Sampling Match", description = "샘플링 매칭 기능 API")
 public class SamplingMatchController {
 
-    private final SamplingMatchService matchService;
+    private final SamplingMatchService samplingMatchService;
 
-    @Operation(summary = "기업 조건 기반 학생단체 리스트 조회")
-    @GetMapping
+
+    @GetMapping("/{samplingRequestId}/student-orgs")
+    @Operation(summary = "매칭된 학생단체 리스트 조회")
     public ApiResponse<List<StudentOrgSummaryResponse>> getMatchedOrgs(
-            @RequestParam(required = false) String schoolName,
-            @RequestParam(required = false) Integer verificationLevel,
-            @RequestParam(defaultValue = "10000") int baseUnitCost,
-            @RequestParam(defaultValue = "50000") int reportOptionFee,
-            @RequestParam(defaultValue = "30000") int operationFee
+            @Parameter(description = "샘플링 요청 ID") @PathVariable Long samplingRequestId,
+            @Parameter(description = "학교명") @RequestParam(required = false) String schoolName,
+            @Parameter(description = "검증 레벨") @RequestParam(required = false) Integer verificationLevel,
+            @Parameter(description = "기본 단가") @RequestParam int baseUnitCost,
+            @Parameter(description = "리포트 옵션 비용") @RequestParam int reportOptionFee,
+            @Parameter(description = "운영비") @RequestParam int operationFee
     ) {
         return ApiResponse.success(
-                matchService.getMatchedStudentOrgs(schoolName, verificationLevel, baseUnitCost, reportOptionFee, operationFee)
+                samplingMatchService.getMatchedStudentOrgs(
+                        samplingRequestId,
+                        schoolName,
+                        verificationLevel,
+                        baseUnitCost,
+                        reportOptionFee,
+                        operationFee
+                )
         );
     }
 
-    @Operation(summary = "학생단체 상세정보 조회 (더 알아보기)")
-    @GetMapping("/{orgId}")
-    public ApiResponse<StudentOrgDetailResponse> getOrgDetail(
-            @PathVariable Long orgId,
-            @RequestParam(defaultValue = "10000") int baseUnitCost,
-            @RequestParam(defaultValue = "50000") int reportOptionFee,
-            @RequestParam(defaultValue = "30000") int operationFee
+
+    @GetMapping("/{samplingRequestId}/student-orgs/{orgId}")
+    @Operation(summary = "학생단체 상세 조회")
+    public ApiResponse<StudentOrgDetailResponse> getStudentOrgDetail(
+            @Parameter(description = "샘플링 요청 ID") @PathVariable Long samplingRequestId,
+            @Parameter(description = "학생단체 ID") @PathVariable Long orgId,
+            @Parameter(description = "기본 단가") @RequestParam int baseUnitCost,
+            @Parameter(description = "리포트 옵션 비용") @RequestParam int reportOptionFee,
+            @Parameter(description = "운영비") @RequestParam int operationFee
     ) {
         return ApiResponse.success(
-                matchService.getStudentOrgDetail(orgId, baseUnitCost, reportOptionFee, operationFee)
+                samplingMatchService.getStudentOrgDetail(
+                        samplingRequestId,
+                        orgId,
+                        baseUnitCost,
+                        reportOptionFee,
+                        operationFee
+                )
         );
     }
 
-    @Operation(summary = "선택한 학생단체 총 예상비용 안내")
-    @PostMapping("/estimate")
-    public ApiResponse<EstimatedTotalCostResponse> estimateTotalCost(
-            @RequestBody List<Long> selectedOrgIds,
-            @RequestParam(defaultValue = "10000") int baseUnitCost,
-            @RequestParam(defaultValue = "50000") int reportOptionFee,
-            @RequestParam(defaultValue = "30000") int operationFee
+
+    @PostMapping("/{samplingRequestId}/estimate")
+    @Operation(summary = "선택한 단체들의 총 예상금액 계산")
+    public ApiResponse<EstimatedTotalCostResponse> estimateTotal(
+            @Parameter(description = "샘플링 요청 ID") @PathVariable Long samplingRequestId,
+            @Parameter(description = "기본 단가") @RequestParam int baseUnitCost,
+            @Parameter(description = "리포트 옵션 비용") @RequestParam int reportOptionFee,
+            @Parameter(description = "운영비") @RequestParam int operationFee,
+            @RequestBody List<Long> selectedOrgIds
     ) {
         return ApiResponse.success(
-                matchService.calculateTotalEstimatedCost(selectedOrgIds, baseUnitCost, reportOptionFee, operationFee)
+                samplingMatchService.calculateTotalEstimatedCost(
+                        samplingRequestId,
+                        selectedOrgIds,
+                        baseUnitCost,
+                        reportOptionFee,
+                        operationFee
+                )
         );
     }
 
-    @Operation(summary = "매칭 마무리", description = "기업이 타깃 키워드 선택을 완료하고 매칭 요청을 제출합니다.")
+
     @PostMapping("/submit")
-    public ApiResponse<SamplingMatchSubmitResponse> submitMatch(@RequestBody SamplingMatchRequestDto dto) {
-        SamplingMatchSubmitResponse response = matchService.submitSamplingMatch(dto);
-        return ApiResponse.success(response);
+    @Operation(summary = "매칭 제출")
+    public ApiResponse<SamplingMatchSubmitResponse> submit(
+            @RequestBody SamplingMatchRequestDto dto
+    ) {
+        return ApiResponse.success(
+                samplingMatchService.submitSamplingMatch(dto)
+        );
     }
+
 }
