@@ -11,6 +11,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "signatures")
 public class Signature {
 
     @Id

@@ -21,36 +21,63 @@ public class SignatureService {
 
     public void saveSignature(SignatureRequest req, Long userId) {
 
+        // 1. timestamp 보정
+        long timestamp = normalizeTimestamp(req.getTimestamp());
+
+        // 2. 시간 검증
         long now = System.currentTimeMillis();
-        if (Math.abs(now - req.getTimestamp()) > 5 * 60 * 1000) {
+        if (Math.abs(now - timestamp) > 5 * 60 * 1000) {
             throw new CustomException(ErrorCode.SIGNATURE_EXPIRED);
         }
 
+        // 3. 이미지 디코딩
         byte[] imageBytes = decodeBase64(req.getSignatureImage());
 
-        String hash = calcHash(imageBytes, req.getTimestamp(), userId);
+        // 4. 해시 계산
+        String serverHash = calcHash(imageBytes, timestamp, userId);
 
+        // 5. DB 저장
         Signature signature = Signature.builder()
                 .userId(userId)
-                .signatureHash(hash)
-                .timestamp(req.getTimestamp())
+                .signatureHash(serverHash)
+                .timestamp(timestamp)
                 .build();
 
         signatureRepository.save(signature);
     }
 
+    private long normalizeTimestamp(Long rawTimestamp) {
+        if (rawTimestamp == null) {
+            throw new CustomException(ErrorCode.INVALID_SIGNATURE);
+        }
+
+        long ts = rawTimestamp;
+
+        // 초 단위 → 밀리초 변환
+        if (ts < 1000000000000L) {
+            ts = ts * 1000;
+        }
+
+        return ts;
+    }
+
     private byte[] decodeBase64(String base64) {
+
+        if (base64 == null || !base64.contains(",")) {
+            throw new CustomException(ErrorCode.INVALID_SIGNATURE);
+        }
+
         String pure = base64.substring(base64.indexOf(",") + 1);
         return Base64.getDecoder().decode(pure);
     }
 
-    private String calcHash(byte[] imageBytes, Long timestamp, Long userId) {
+    private String calcHash(byte[] imageBytes, long timestamp, Long userId) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
             digest.update(imageBytes);
-            digest.update(timestamp.toString().getBytes(StandardCharsets.UTF_8));
-            digest.update(userId.toString().getBytes(StandardCharsets.UTF_8));
+            digest.update(String.valueOf(timestamp).getBytes(StandardCharsets.UTF_8));
+            digest.update(String.valueOf(userId).getBytes(StandardCharsets.UTF_8));
 
             return bytesToHex(digest.digest());
         } catch (Exception e) {

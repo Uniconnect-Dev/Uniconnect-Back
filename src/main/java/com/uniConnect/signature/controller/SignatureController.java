@@ -6,8 +6,9 @@ import com.uniConnect.signature.service.SignatureService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
-import lombok.RequiredArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,11 +23,17 @@ public class SignatureController {
     @PostMapping
     @Operation(summary = "전자서명 저장")
     public ApiResponse<?> saveSignature(
-            @RequestBody SignatureRequest request,
+            @Valid @RequestBody SignatureRequest request,
             Authentication auth
     ) {
-        Long userId = (Long) auth.getPrincipal(); // or CustomUser 접근 방식 유지
+
+        com.uniConnect.member.security.local.CustomUser user =
+                (com.uniConnect.member.security.local.CustomUser) auth.getPrincipal();
+
+        Long userId = user.getUserId();
+
         signatureService.saveSignature(request, userId);
         return ApiResponse.success("전자서명 저장 완료");
     }
 }
+
