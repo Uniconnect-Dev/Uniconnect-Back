@@ -5,6 +5,7 @@ import com.uniConnect.sampling.repository.*;
 import com.uniConnect.sampling.entity.*;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import com.uniConnect.sampling.enums.SamplingStatus;
+import com.uniConnect.studentOrg.entity.StudentOrgAvailability;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -138,6 +139,47 @@ public class SamplingMatchService {
 
         return EstimatedTotalCostResponse.of(total);
     }
+
+    /**
+     * 단체별 예상금액 계산
+     */
+    @Transactional(readOnly = true)
+    public OrgEstimatedCostResponse calculateSingleOrgEstimatedCost(
+            Long samplingRequestId,
+            Long orgId,
+            int baseUnitCost,
+            int reportOptionFee,
+            int operationFee
+    ) {
+        // 샘플링 요청 검증 (선택)
+        SamplingRequest request = samplingRequestRepository.findById(samplingRequestId)
+                .orElseThrow(() -> new IllegalArgumentException("샘플링 요청을 찾을 수 없습니다."));
+
+        // 단체 조회
+        StudentOrg org = studentOrgQueryRepository.findById(orgId)
+                .orElseThrow(() -> new IllegalArgumentException("학생단체를 찾을 수 없습니다."));
+
+        // 단체의 첫 번째 행사 데이터 사용 (대표 행사)
+        StudentOrgAvailability av = org.getAvailabilities().stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("단체 행사 정보가 없습니다."));
+
+        int participants = (av.getRecommendedSampleQty() != null)
+                ? av.getRecommendedSampleQty()
+                : (av.getExposureCount() != null ? av.getExposureCount() : 100); // fallback
+
+        int cost = (participants * baseUnitCost) + reportOptionFee + operationFee;
+
+        return OrgEstimatedCostResponse.builder()
+                .studentOrgId(orgId)
+                .organizationName(org.getOrganizationName())
+                .participants(participants)
+                .minEstimated(cost - 100_000)
+                .maxEstimated(cost + 100_000)
+                .estimatedRange(String.format("%,d원 ~ %,d원", cost - 100_000, cost + 100_000))
+                .build();
+    }
+
 
 
     /**

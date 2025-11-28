@@ -86,6 +86,26 @@ public class SamplingMatchController {
         );
     }
 
+    @Operation(summary = "단체별 예상 금액 계산")
+    @GetMapping("/{samplingRequestId}/student-orgs/{orgId}/estimate")
+    public ApiResponse<OrgEstimatedCostResponse> estimateOrgCost(
+            @PathVariable Long samplingRequestId,
+            @PathVariable Long orgId,
+            @RequestParam int baseUnitCost,
+            @RequestParam int reportOptionFee,
+            @RequestParam int operationFee
+    ) {
+        return ApiResponse.success(
+                samplingMatchService.calculateSingleOrgEstimatedCost(
+                        samplingRequestId,
+                        orgId,
+                        baseUnitCost,
+                        reportOptionFee,
+                        operationFee
+                )
+        );
+    }
+
 
     @PostMapping("/submit")
     @Operation(summary = "매칭 제출")
