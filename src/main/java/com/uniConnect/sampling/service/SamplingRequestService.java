@@ -1,6 +1,7 @@
 package com.uniConnect.sampling.service;
 
-
+import com.uniConnect.studentOrg.entity.StudentOrg;
+import com.uniConnect.sampling.enums.IndustryType;
 import com.uniConnect.member.entity.User;
 import com.uniConnect.member.repository.UserRepository;
 import com.uniConnect.s3.S3FileService;
@@ -11,6 +12,8 @@ import com.uniConnect.sampling.entity.*;
 import com.uniConnect.sampling.enums.*;
 import com.uniConnect.sampling.enums.SamplingStatus;
 import com.uniConnect.sampling.repository.*;
+import com.uniConnect.global.exception.CustomException;
+import com.uniConnect.global.exception.ErrorCode;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -44,13 +48,26 @@ public class SamplingRequestService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
 
+        StudentOrg org = user.getStudentOrg();
+        if (org == null) {
+            throw new IllegalStateException("해당 유저는 학생단체 정보가 없습니다.");
+        }
+
         SamplingRequest draft = SamplingRequest.builder()
                 .user(user)
                 .status(SamplingStatus.Draft)
+                .schoolName(org.getSchoolName())
+                .orgName(org.getOrganizationName())
+                .contactName(org.getManagerName())
+                .phone(org.getPhone())
+                .email(org.getEmail())
+
                 .build();
 
         return samplingRequestRepository.save(draft);
     }
+
+
 
     /** Step 1: 단체 기본 정보 입력 */
     public void updateStep1(Long id, OrgInfoRequest dto) {
@@ -65,12 +82,32 @@ public class SamplingRequestService {
     /** Step 2: 단체 해시태그 선택 (BasicInfo, Lifestyle) */
     public void updateStep2(Long id, TargetTagRequest dto) {
         SamplingRequest req = findById(id);
-        selectionRepository.deleteAll(req.getSelections());
 
-        var allIds = dto.basicInfoTagIds();
+        if (dto.basicInfoTagIds() == null || dto.basicInfoTagIds().isEmpty()) {
+            throw new IllegalArgumentException("기본 정보 해시태그는 최소 1개 이상 선택해야 합니다.");
+        }
+        if (dto.lifestyleTagIds() == null || dto.lifestyleTagIds().isEmpty()) {
+            throw new IllegalArgumentException("라이프스타일 해시태그는 최소 1개 이상 선택해야 합니다.");
+        }
+        if (dto.basicInfoTagIds().size() > 5 || dto.lifestyleTagIds().size() > 5) {
+            throw new IllegalArgumentException("각 카테고리별 최대 5개까지만 선택 가능합니다.");
+        }
+
+        List<SamplingTargetSelection> toRemove = req.getSelections().stream()
+                .filter(s ->
+                        s.getCategory() == SamplingTargetCategory.BasicInfo ||
+                                s.getCategory() == SamplingTargetCategory.Lifestyle
+                )
+                .toList();
+        selectionRepository.deleteAll(toRemove);
+
+        // ===== 새 태그 저장 =====
+        List<Long> allIds = new ArrayList<>();
+        allIds.addAll(dto.basicInfoTagIds());
         allIds.addAll(dto.lifestyleTagIds());
 
         List<SamplingTargetKeyword> tags = keywordRepository.findAllById(allIds);
+
         for (SamplingTargetKeyword tag : tags) {
             if (tag.getCategory() == SamplingTargetCategory.BasicInfo ||
                     tag.getCategory() == SamplingTargetCategory.Lifestyle) {
@@ -87,14 +124,27 @@ public class SamplingRequestService {
     /** Step 3: 행사 정보 입력 (EventNature) */
     public void updateStep3(Long id, EventInfoRequest dto) {
         SamplingRequest req = findById(id);
+
+        if (dto.eventTitle() == null || dto.eventTitle().isBlank()) {
+            throw new IllegalArgumentException("행사명은 필수 입력 항목입니다.");
+        }
+        if (dto.eventDescription() != null && dto.eventDescription().length() > 500) {
+            throw new IllegalArgumentException("행사 설명은 500자 이내여야 합니다.");
+        }
+
         req.setEventTitle(dto.eventTitle());
         req.setEventDescription(dto.eventDescription());
         req.setRequestedQuantity(dto.requestedQuantity());
         req.setEventStartDate(dto.eventStartDate());
         req.setEventEndDate(dto.eventEndDate());
 
+        List<SamplingTargetSelection> toRemove = req.getSelections().stream()
+                .filter(s -> s.getCategory() == SamplingTargetCategory.EventNature)
+                .toList();
+        selectionRepository.deleteAll(toRemove);
+
         var tags = keywordRepository.findAllById(dto.eventTagIds());
-        tags.forEach(tag -> {
+        for (SamplingTargetKeyword tag : tags) {
             if (tag.getCategory() == SamplingTargetCategory.EventNature) {
                 req.addSelection(SamplingTargetSelection.builder()
                         .samplingRequest(req)
@@ -103,15 +153,28 @@ public class SamplingRequestService {
                         .selectedLabel(tag.getLabel())
                         .build());
             }
-        });
+        }
     }
+
 
     /** Step 4: 산업군 및 공식 해시태그 선택 */
     public void updateStep4(Long id, IndustryRequest dto) {
         SamplingRequest req = findById(id);
-        req.setIndustry(dto.industry());
+
+        if (dto.detailRequest() != null && dto.detailRequest().length() > 250) {
+            throw new IllegalArgumentException("세부 요청 사항은 250자 이내여야 합니다.");
+        }
+
+        req.setIndustry(IndustryType.valueOf(dto.industry()));
+        req.setDetailRequest(dto.detailRequest());
+
+        List<SamplingTargetSelection> toRemove = req.getSelections().stream()
+                .filter(s -> s.getCategory() == SamplingTargetCategory.IndustryOfficial)
+                .toList();
+        selectionRepository.deleteAll(toRemove);
+
         var tags = keywordRepository.findAllById(dto.industryTagIds());
-        tags.forEach(tag -> {
+        for (SamplingTargetKeyword tag : tags) {
             if (tag.getCategory() == SamplingTargetCategory.IndustryOfficial) {
                 req.addSelection(SamplingTargetSelection.builder()
                         .samplingRequest(req)
@@ -120,8 +183,9 @@ public class SamplingRequestService {
                         .selectedLabel(tag.getLabel())
                         .build());
             }
-        });
+        }
     }
+
 
     /** Step 5: 제안서 업로드 (S3) */
     public String uploadProposal(Long id, MultipartFile file) throws Exception {
@@ -146,9 +210,17 @@ public class SamplingRequestService {
     }
 
     /** Step 1: 계약서 서명 → 승인 대기 */
-    public void signContract(Long id) {
-        SamplingRequest req = findById(id);
+    public void signContract(Long id, Long userId) {
+
+        SamplingRequest req = samplingRequestRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ErrorCode.REQUEST_NOT_FOUND));
+
+        if (!req.getUser().getUserId().equals(userId)) {
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
+        }
         req.setStatus(SamplingStatus.ContractApprovalPending);
+
+        samplingRequestRepository.save(req);
     }
 
     /** Step 2: 계약 승인 후 → 인수증 대기 */

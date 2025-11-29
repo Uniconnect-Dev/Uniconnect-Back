@@ -65,6 +65,9 @@ public class SamplingRequest {
 
     private String proposalFileUrl; // 제안서 S3 URL
 
+    @Column(length = 250)
+    private String detailRequest;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private SamplingStatus status;

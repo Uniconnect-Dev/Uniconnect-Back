@@ -6,6 +6,8 @@ import com.uniConnect.member.repository.UserRepository;
 import com.uniConnect.sampling.dto.request.*;
 import com.uniConnect.sampling.dto.response.*;
 import com.uniConnect.sampling.dto.FeeResponse;
+import com.uniConnect.signature.dto.SignatureRequest;
+import com.uniConnect.signature.service.SignatureService;
 import com.uniConnect.member.entity.User;
 import com.uniConnect.member.entity.LocalCredential;
 import com.uniConnect.member.repository.LocalCredentialRepository;
@@ -20,6 +22,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,27 +43,24 @@ public class SamplingRequestController {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final LocalCredentialRepository localCredentialRepository;
+    private final SignatureService signatureService;
 
     /** Step 0 */
     @PostMapping("/draft")
-    @Operation(summary = "샘플링 초안 생성", description = "학생단체 샘플링 초안을 생성합니다.")
+    @Operation(summary = "Step 0: 샘플링 초안 생성", description = "학생단체 샘플링 초안을 생성합니다.")
     public ApiResponse<SamplingRequestSummaryResponse> createDraft(
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @AuthenticationPrincipal CustomUser user
+    ) {
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("인증 토큰이 없습니다. Authorization: Bearer ... 헤더를 넣어주세요.");
+        if (user == null) {
+            throw new IllegalArgumentException("로그인 정보가 없습니다.");
         }
 
-        String token = authHeader.substring(7);
-        String loginId = jwtUtil.extractSubject(token);
+        Long userId = user.getUserId();
 
-        var credential = localCredentialRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new IllegalArgumentException("로그인 아이디에 해당하는 사용자를 찾을 수 없습니다: " + loginId));
-
-        User user = credential.getUser();
-        SamplingRequest saved = requestService.createDraft(user.getUserId());
-
+        SamplingRequest saved = requestService.createDraft(userId);
         SamplingRequestSummaryResponse summary = requestService.getSummary(saved.getSamplingRequestId());
+
         return ApiResponse.success("초안 생성 완료", summary);
     }
 
@@ -157,8 +157,16 @@ public class SamplingRequestController {
             description = "학생단체가 계약서를 확인 후 전자 서명을 완료합니다. 상태는 ContractApprovalPending으로 변경됩니다."
     )
     @PostMapping("/{id}/contract/sign")
-    public ApiResponse<SamplingRequestSummaryResponse> signContract(@PathVariable Long id) {
-        requestService.signContract(id);
+    public ApiResponse<SamplingRequestSummaryResponse> signContract(
+            @PathVariable Long id,
+            @Valid @RequestBody SignatureRequest signatureRequest,
+            Authentication auth
+    ) {
+        com.uniConnect.member.security.local.CustomUser user =
+                (com.uniConnect.member.security.local.CustomUser) auth.getPrincipal();
+        Long userId = user.getUserId();
+        signatureService.saveSignature(signatureRequest, userId);
+        requestService.signContract(id, userId);
         SamplingRequestSummaryResponse summary = requestService.getSummary(id);
         return ApiResponse.success("계약서 서명 완료", summary);
     }

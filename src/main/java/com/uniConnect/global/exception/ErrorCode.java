@@ -47,6 +47,7 @@ public enum ErrorCode {
     // 샘플링 관련
     SAMPLING_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "샘플링 요청을 찾을 수 없습니다."),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 리소스를 찾을 수 없습니다."),
+    REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "샘플링 요청을 찾을 수 없습니다."),
 
     // 인증/인가 관련
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
