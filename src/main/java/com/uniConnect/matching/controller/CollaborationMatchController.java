@@ -6,6 +6,8 @@ import com.uniConnect.matching.dto.MatchingCompleteResponse;
 import com.uniConnect.matching.service.CollaborationMatchService;
 import com.uniConnect.matching.service.CollaborationMatchQueryService;
 import com.uniConnect.member.security.local.CustomUser;
+import com.uniConnect.matching.dto.CompanyMatchRequest;
+import com.uniConnect.matching.dto.CompanyMatchResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,7 +26,7 @@ public class CollaborationMatchController {
     private final CollaborationMatchQueryService collaborationMatchQueryService;
 
     @Operation(
-            summary = "매칭 요청 마무리",
+            summary = "학생단체 → 기업 매칭 요청 마무리",
             description = "학생단체가 선택한 기업들에게 협업 매칭 요청을 전송합니다."
     )
     @ApiResponses(value = {
@@ -48,4 +50,23 @@ public class CollaborationMatchController {
                 collaborationMatchService.completeMatching(studentOrgId, dto)
         );
     }
+
+    @PostMapping("/company/complete")
+    @Operation(summary = "기업 → 학생단체 매칭 요청 마무리")
+    public ApiResponse<CompanyMatchResponse> completeCompanyMatching(
+            @AuthenticationPrincipal CustomUser user,
+            @RequestBody CompanyMatchRequest dto
+    ) {
+
+        if (user == null || user.getUserId() == null) {
+            throw new IllegalStateException("인증 정보가 없습니다. JWT 토큰을 확인하세요.");
+        }
+
+        Long companyId = collaborationMatchQueryService.findCompanyIdByUserId(user.getUserId());
+
+        return ApiResponse.success(
+                collaborationMatchService.completeCompanyMatching(companyId, dto)
+        );
+    }
+
 }

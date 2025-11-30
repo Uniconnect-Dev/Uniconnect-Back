@@ -6,6 +6,11 @@ import com.uniConnect.sampling.entity.*;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import com.uniConnect.sampling.enums.SamplingStatus;
 import com.uniConnect.studentOrg.entity.StudentOrgAvailability;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
+import com.uniConnect.matching.repository.CollaborationMatchRequestRepository;
+import com.uniConnect.studentOrg.enums.CollaborationType;
+import com.uniConnect.campaign.enums.MatchingStatus;
+import java.time.LocalDateTime;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +27,7 @@ public class SamplingMatchService {
     private final SamplingTargetKeywordRepository targetKeywordRepository;
     private final SamplingTargetSelectionRepository targetSelectionRepository;
     private final SamplingMatchedOrgRepository matchedOrgRepository;
+    private final CollaborationMatchRequestRepository collaborationMatchRequestRepository;
 
     /**
      * 매칭된 학생단체 리스트 조회
@@ -213,6 +219,22 @@ public class SamplingMatchService {
 
         for (StudentOrg org : selectedOrgs) {
             request.addMatchedOrg(SamplingMatchedOrg.of(request, org));
+        }
+
+        for (StudentOrg org : selectedOrgs) {
+
+            CollaborationMatchRequest match = CollaborationMatchRequest.builder()
+                    .studentOrgId(org.getStudentOrgId())
+                    .companyId(request.getUser().getCompany().getCompanyId())
+                    .eventTitle(request.getEventTitle())
+                    .desiredDate(request.getEventStartDate())
+                    .industry(request.getIndustry())
+                    .collaborationType(CollaborationType.Sampling.name())
+                    .status(MatchingStatus.Requested)
+                    .requestedAt(LocalDateTime.now())
+                    .build();
+
+            collaborationMatchRequestRepository.save(match);
         }
 
         // 3) 상태 변경

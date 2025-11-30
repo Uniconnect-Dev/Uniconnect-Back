@@ -1,9 +1,13 @@
 package com.uniConnect.sampling.service;
 
+import com.uniConnect.studentOrg.enums.CollaborationType;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import com.uniConnect.sampling.enums.IndustryType;
 import com.uniConnect.member.entity.User;
 import com.uniConnect.member.repository.UserRepository;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
+import com.uniConnect.campaign.enums.MatchingStatus;
+import com.uniConnect.matching.repository.CollaborationMatchRequestRepository;
 import com.uniConnect.s3.S3FileService;
 import com.uniConnect.sampling.dto.request.*;
 import com.uniConnect.sampling.dto.response.*;
@@ -36,6 +40,7 @@ public class SamplingRequestService {
     private final S3FileService s3FileService;
     private final SamplingRequestRepository samplingRequestRepository;
     private final UserRepository userRepository;
+    private final CollaborationMatchRequestRepository collaborationMatchRequestRepository;
 
     private static final int PER_SAMPLING_FEE = 50_000;   // 건당 수수료
     private static final int DEPOSIT = 50_000;            // 보증금
@@ -266,7 +271,26 @@ public class SamplingRequestService {
     /** Step 6: 최종 제출 */
     public void submit(Long id) {
         SamplingRequest req = findById(id);
+
         req.setStatus(SamplingStatus.Submitted);
+
+        Long studentOrgId = req.getUser().getStudentOrg().getStudentOrgId();
+
+        for (SamplingMatchedOrg matched : req.getMatchedOrgs()) {
+
+            CollaborationMatchRequest match = CollaborationMatchRequest.builder()
+                    .studentOrgId(matched.getStudentOrg().getStudentOrgId())  // 학생단체
+                    .companyId(req.getUser().getCompany().getCompanyId())     // 기업
+                    .eventTitle(req.getEventTitle())
+                    .desiredDate(req.getEventStartDate())
+                    .industry(req.getIndustry())                               // enum 그대로
+                    .collaborationType(CollaborationType.Sampling.name())
+                    .status(MatchingStatus.Requested)
+                    .requestedAt(LocalDateTime.now())
+                    .build();
+
+            collaborationMatchRequestRepository.save(match);
+        }
     }
 
     /** 요약 조회 */

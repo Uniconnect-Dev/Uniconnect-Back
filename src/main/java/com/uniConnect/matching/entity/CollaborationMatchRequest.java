@@ -1,6 +1,7 @@
 package com.uniConnect.matching.entity;
 
 import com.uniConnect.campaign.enums.MatchingStatus;
+import com.uniConnect.sampling.enums.IndustryType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,7 +28,8 @@ public class CollaborationMatchRequest {
 
     private LocalDate desiredDate;
 
-    private String industry;
+    @Enumerated(EnumType.STRING)
+    private IndustryType industry;
     private String collaborationType;
 
     @Enumerated(EnumType.STRING)
