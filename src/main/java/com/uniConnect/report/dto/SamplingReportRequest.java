@@ -26,5 +26,12 @@ public class SamplingReportRequest {
     private Integer snsMentions;
 
     // 피드백
-    private String feedbackText;  // 학생 피드백(자유서술)
+    private String feedbackText;
+
+    private String genderDistJson;
+    private String ageDistJson;
+    private String schoolDistJson;
+    private String surveyStatsJson;
+    private String heatmapJson;
+    private String kpiChartsJson;
 }

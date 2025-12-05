@@ -29,13 +29,6 @@ public class StudentOrgCurationService {
         }
         List<StudentOrg> allGroups = studentOrgRepository.findAll();
 
-        System.out.println("==== CURATION DEBUG START ====");
-        System.out.println("Total Orgs: " + allGroups.size());
-        for (StudentOrg org : allGroups) {
-            System.out.println("ORG " + org.getStudentOrgId() + " | name=" + org.getOrganizationName() +
-                    " | safetyFlag=" + org.getSafetyFlag() + " | verif=" + org.getVerificationLevel());
-        }
-        System.out.println("==== CURATION DEBUG END ====");
         return allGroups.stream()
                 //.filter(org -> !Boolean.TRUE.equals(org.getSafetyFlag()))
                 //.filter(org -> org.getVerificationLevel() != null && org.getVerificationLevel() >= 2)

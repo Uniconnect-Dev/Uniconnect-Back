@@ -5,6 +5,9 @@ import com.uniConnect.report.enums.SamplingReportStatus;
 import com.uniConnect.survey.entity.Survey;
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.vladmihalcea.hibernate.type.json.JsonType;
+import org.hibernate.annotations.Type;
 
 import java.time.LocalDateTime;
 
@@ -69,24 +72,29 @@ public class SamplingReport {
     // ─────────────────────────────
     //  KPI 상세 지표
     // ─────────────────────────────
-
+    @Type(JsonType.class)
     @Column(columnDefinition = "json")
-    private String genderDistJson;    // 성별 비율 차트 데이터
+    private String genderDistJson;
 
+    @Type(JsonType.class)
     @Column(columnDefinition = "json")
-    private String ageDistJson;       // 연령대 비율 차트 데이터
+    private String ageDistJson;
 
+    @Type(JsonType.class)
     @Column(columnDefinition = "json")
-    private String schoolDistJson;    // 학교별 분석 결과
+    private String schoolDistJson;
 
+    @Type(JsonType.class)
     @Column(columnDefinition = "json")
-    private String surveyStatsJson;   // 설문 통계 요약
+    private String surveyStatsJson;
 
+    @Type(JsonType.class)
     @Column(columnDefinition = "json")
-    private String heatmapJson;       // 행사장 Heatmap 데이터
+    private String heatmapJson;
 
+    @Type(JsonType.class)
     @Column(columnDefinition = "json")
-    private String kpiChartsJson;     // 기타 KPI 차트 묶음
+    private String kpiChartsJson;
 
     /** 리포트 PDF 자동 생성 후 S3 URL */
     @Column(name = "report_pdf_url")

@@ -12,9 +12,9 @@ import java.time.LocalDateTime;
 public class ContractListItemDto {
     private Long contractId;
 
-    private String studentOrgName;   // 매칭에서 student_org 이름
-    private String campaignName;     // 매칭에서 캠페인 이름
-    private String collaborationType; // 협업 형태
+    private String studentOrgName;
+    private String campaignName;
+    private String collaborationType;
 
     private String status;
     private Boolean studentSigned;

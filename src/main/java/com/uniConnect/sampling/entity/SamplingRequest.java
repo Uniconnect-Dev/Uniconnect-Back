@@ -110,6 +110,15 @@ public class SamplingRequest {
         this.matchedOrgs.add(matched);
     }
 
+    @Builder.Default
+    @OneToMany(mappedBy = "samplingRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SamplingSelectedCompany> selectedCompanies = new ArrayList<>();
+
+    public void addSelectedCompany(SamplingSelectedCompany s) {
+        s.setSamplingRequest(this);
+        this.selectedCompanies.add(s);
+    }
+
     @PrePersist
     public void prePersist() {
         if (this.status == null) this.status = SamplingStatus.Draft;

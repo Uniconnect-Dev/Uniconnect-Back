@@ -7,10 +7,10 @@ import com.uniConnect.collaboration.enums.*;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
 @Table(name = "receipt_confirmations")
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor @Builder
 public class ReceiptConfirmation {
 
     @Id
@@ -18,20 +18,31 @@ public class ReceiptConfirmation {
     @Column(name = "receipt_id")
     private Long receiptId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "collaboration_id", nullable = false)
+    private Collaboration collaboration;
+
+    @Column(columnDefinition = "text")
+    private String receiptImageUrl;
+
+    @Column(columnDefinition = "text")
+    private String signatureImageBase64;
+
+    @Column(name = "signature_timestamp")
+    private Long signatureTimestamp;
+
     private String receiverName;
     private String location;
 
-    @Column(name = "receipt_image_url", columnDefinition = "text")
-    private String receiptImageUrl;
+    private Integer receivedQuantity;
+    private Boolean hasDefect;
+    private LocalDate expirationDate;
+
+    private LocalDateTime receivedAt;
 
     private LocalDateTime submittedAt;
     private LocalDateTime approvedAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 30)
-    private ReceiptStatus status; // PendingSignature, WaitingApproval, Approved
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "collaboration_id")
-    private Collaboration collaboration;
+    private ReceiptStatus status;
 }

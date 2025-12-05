@@ -4,6 +4,8 @@ import com.uniConnect.studentOrg.enums.CollaborationType;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import com.uniConnect.sampling.enums.IndustryType;
 import com.uniConnect.member.entity.User;
+import com.uniConnect.company.repository.CompanyRepository;
+import com.uniConnect.company.entity.Company;
 import com.uniConnect.member.repository.UserRepository;
 import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import com.uniConnect.campaign.enums.MatchingStatus;
@@ -41,12 +43,21 @@ public class SamplingRequestService {
     private final SamplingRequestRepository samplingRequestRepository;
     private final UserRepository userRepository;
     private final CollaborationMatchRequestRepository collaborationMatchRequestRepository;
+    private final SamplingSelectedCompanyRepository selectedCompanyRepository;
+    private final CompanyRepository companyRepository;
 
     private static final int PER_SAMPLING_FEE = 50_000;   // 건당 수수료
     private static final int DEPOSIT = 50_000;            // 보증금
 
     @Value("${app.s3.bucket}")
     private String bucketName;
+
+    public Long getOwnerId(Long id) {
+        SamplingRequest req = samplingRequestRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ErrorCode.SAMPLING_REQUEST_NOT_FOUND));
+
+        return req.getUser().getUserId();
+    }
 
     /** Step 0: 샘플링 요청 초안 생성 */
     public SamplingRequest createDraft(Long userId) {
@@ -203,6 +214,36 @@ public class SamplingRequestService {
         return url;
     }
 
+    public SamplingRequestSummaryResponse saveSelectedCompanies(Long id, List<Long> companyIds) {
+
+        if (companyIds == null || companyIds.isEmpty())
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+
+        if (companyIds.size() > 5)
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+
+        SamplingRequest req = findById(id);
+
+        selectedCompanyRepository.deleteBySamplingRequest_SamplingRequestId(id);
+        req.getSelectedCompanies().clear();
+
+        for (Long cid : companyIds) {
+
+            Company company = companyRepository.findById(cid)
+                    .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+            req.addSelectedCompany(SamplingSelectedCompany.of(req, company));
+        }
+
+        return getSummary(id);
+    }
+
+    public int calcCost(Long id) {
+        SamplingRequest req = findById(id);
+        return req.getSelectedCompanies().size() * PER_SAMPLING_FEE;
+    }
+
+
     /** 관리자 승인/반려 */
     public void approveRequest(Long id) {
         SamplingRequest req = findById(id);
@@ -270,27 +311,31 @@ public class SamplingRequestService {
 
     /** Step 6: 최종 제출 */
     public void submit(Long id) {
+
         SamplingRequest req = findById(id);
 
-        req.setStatus(SamplingStatus.Submitted);
+        if (req.getSelectedCompanies().isEmpty())
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
         Long studentOrgId = req.getUser().getStudentOrg().getStudentOrgId();
 
-        for (SamplingMatchedOrg matched : req.getMatchedOrgs()) {
+//        for (SamplingSelectedCompany sc : req.getSelectedCompanies()) {
+//
+//            CollaborationMatchRequest match = CollaborationMatchRequest.builder()
+//                    .studentOrgId(studentOrgId)
+//                    .companyId(sc.getCompany().getCompanyId())
+//                    .eventTitle(req.getEventTitle())
+//                    .desiredDate(req.getEventStartDate())
+//                    .industry(req.getIndustry())
+//                    .collaborationType(CollaborationType.Sampling.name())
+//                    .status(MatchingStatus.Requested)
+//                    .requestedAt(LocalDateTime.now())
+//                    .build();
+//
+//            collaborationMatchRequestRepository.save(match);
+//        }
 
-            CollaborationMatchRequest match = CollaborationMatchRequest.builder()
-                    .studentOrgId(matched.getStudentOrg().getStudentOrgId())  // 학생단체
-                    .companyId(req.getUser().getCompany().getCompanyId())     // 기업
-                    .eventTitle(req.getEventTitle())
-                    .desiredDate(req.getEventStartDate())
-                    .industry(req.getIndustry())                               // enum 그대로
-                    .collaborationType(CollaborationType.Sampling.name())
-                    .status(MatchingStatus.Requested)
-                    .requestedAt(LocalDateTime.now())
-                    .build();
-
-            collaborationMatchRequestRepository.save(match);
-        }
+        req.setStatus(SamplingStatus.Submitted);
     }
 
     /** 요약 조회 */
@@ -341,6 +386,23 @@ public class SamplingRequestService {
         if (req.getStatus() != SamplingStatus.Submitted &&
                 req.getStatus() != SamplingStatus.Approved) {
             throw new IllegalStateException("매칭 요청은 제출된 상태에서만 가능합니다.");
+        }
+
+        Long studentOrgId = req.getUser().getStudentOrg().getStudentOrgId();
+
+        for (SamplingSelectedCompany sc : req.getSelectedCompanies()) {
+            CollaborationMatchRequest match = CollaborationMatchRequest.builder()
+                    .studentOrgId(studentOrgId)
+                    .companyId(sc.getCompany().getCompanyId())
+                    .eventTitle(req.getEventTitle())
+                    .desiredDate(req.getEventStartDate())
+                    .industry(req.getIndustry())
+                    .collaborationType(CollaborationType.Sampling.name())
+                    .status(MatchingStatus.Requested)
+                    .requestedAt(LocalDateTime.now())
+                    .build();
+
+            collaborationMatchRequestRepository.save(match);
         }
 
         req.setStatus(SamplingStatus.MatchingRequested);

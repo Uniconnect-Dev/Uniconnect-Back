@@ -2,36 +2,24 @@ package com.uniConnect.sampling.controller;
 
 import com.uniConnect.global.response.ApiResponse;
 import com.uniConnect.member.security.local.CustomUser;
-import com.uniConnect.member.repository.UserRepository;
 import com.uniConnect.sampling.dto.request.*;
 import com.uniConnect.sampling.dto.response.*;
 import com.uniConnect.sampling.dto.FeeResponse;
 import com.uniConnect.signature.dto.SignatureRequest;
 import com.uniConnect.signature.service.SignatureService;
-import com.uniConnect.member.entity.User;
-import com.uniConnect.member.entity.LocalCredential;
-import com.uniConnect.member.repository.LocalCredentialRepository;
-import com.uniConnect.member.security.local.JwtUtil;
-import com.uniConnect.sampling.dto.response.SamplingRequestSummaryResponse;
+import com.uniConnect.global.exception.CustomException;
+import com.uniConnect.global.exception.ErrorCode;
 import com.uniConnect.sampling.entity.SamplingRequest;
 import com.uniConnect.sampling.service.SamplingRequestService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestPart;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+
 
 @Tag(name = "Sampling Request API", description = "학생 단체 샘플링 요청 생성 및 관리 API")
 @RestController
@@ -40,261 +28,409 @@ import org.springframework.web.multipart.MultipartFile;
 public class SamplingRequestController {
 
     private final SamplingRequestService requestService;
-    private final JwtUtil jwtUtil;
-    private final UserRepository userRepository;
-    private final LocalCredentialRepository localCredentialRepository;
     private final SignatureService signatureService;
 
-    /** Step 0 */
+
+    /* ============================================================
+       공통 유틸
+    ============================================================ */
+    private void validateFile(MultipartFile file) {
+        if (file == null || file.isEmpty())
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+
+        if (file.getSize() > 15 * 1024 * 1024)
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+    }
+
+    private void requireOwner(Long userId, Long ownerId) {
+        if (!userId.equals(ownerId))
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
+    }
+
+    /**
+     * CustomUser 에 getRole()이 없으므로 권한은 authorities 에서 ROLE_Admin 체크
+     */
+    private boolean isAdmin(CustomUser user) {
+        return user != null &&
+                user.getAuthorities().stream()
+                        .anyMatch(a -> a.getAuthority().equals("ROLE_Admin"));
+    }
+
+    private void requireAdmin(CustomUser user) {
+        if (!isAdmin(user))
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
+    }
+
+
+    /* ============================================================
+       Step 0 — 초안 생성
+    ============================================================ */
     @PostMapping("/draft")
-    @Operation(summary = "Step 0: 샘플링 초안 생성", description = "학생단체 샘플링 초안을 생성합니다.")
+    @Operation(summary = "Step 0: 샘플링 초안 생성")
     public ApiResponse<SamplingRequestSummaryResponse> createDraft(
             @AuthenticationPrincipal CustomUser user
     ) {
+        if (user == null) throw new CustomException(ErrorCode.UNAUTHORIZED);
 
-        if (user == null) {
-            throw new IllegalArgumentException("로그인 정보가 없습니다.");
-        }
+        SamplingRequest saved = requestService.createDraft(user.getUserId());
 
-        Long userId = user.getUserId();
-
-        SamplingRequest saved = requestService.createDraft(userId);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(saved.getSamplingRequestId());
-
-        return ApiResponse.success("초안 생성 완료", summary);
+        return ApiResponse.success(
+                "초안 생성 완료",
+                requestService.getSummary(saved.getSamplingRequestId())
+        );
     }
 
-    /** Step 1 */
-    @Operation(summary = "Step 1: 단체 기본정보 입력", description = "학교명, 단체명, 담당자명, 전화번호, 이메일을 등록 또는 수정합니다.")
+
+    /* ============================================================
+       Step 1 — 단체 기본정보
+    ============================================================ */
     @PutMapping("/{id}/org-info")
+    @Operation(summary = "Step 1: 단체 기본정보 입력")
     public ApiResponse<SamplingRequestSummaryResponse> step1(
             @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user,
             @Valid @RequestBody OrgInfoRequest dto
     ) {
-
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
         requestService.updateStep1(id, dto);
 
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("단체 기본정보 저장 완료", summary);
+        return ApiResponse.success(
+                "단체 기본정보 저장 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    /** Step 2 */
-    @Operation(summary = "Step 2: 단체 해시태그 선택", description = "카테고리별 단체 해시태그를 선택합니다. (해시태그 각 최대 5개)")
+
+    /* ============================================================
+       Step 2 — 해시태그 선택
+    ============================================================ */
     @PutMapping("/{id}/tags")
-    public ApiResponse<SamplingRequestSummaryResponse> step2(@PathVariable Long id, @Valid @RequestBody TargetTagRequest dto) {
+    @Operation(summary = "Step 2: 단체 해시태그 선택")
+    public ApiResponse<SamplingRequestSummaryResponse> step2(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user,
+            @Valid @RequestBody TargetTagRequest dto
+    ) {
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
+
         requestService.updateStep2(id, dto);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("단체 해시태그 저장 완료", summary);
+
+        return ApiResponse.success(
+                "단체 해시태그 저장 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    /** Step 3 */
-    @Operation(summary = "Step 3: 행사 정보 입력", description = "행사명, 행사 설명, 필요 개수, 기간, 이벤트 관련 해시태그를 입력합니다.")
+
+    /* ============================================================
+       Step 3 — 행사 정보
+    ============================================================ */
     @PutMapping("/{id}/event")
-    public ApiResponse<SamplingRequestSummaryResponse> step3(@PathVariable Long id, @Valid @RequestBody EventInfoRequest dto) {
+    @Operation(summary = "Step 3: 행사 정보 입력")
+    public ApiResponse<SamplingRequestSummaryResponse> step3(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user,
+            @Valid @RequestBody EventInfoRequest dto
+    ) {
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
         requestService.updateStep3(id, dto);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("행사 정보 저장 완료", summary);
+
+        return ApiResponse.success(
+                "행사 정보 저장 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    /** Step 4 */
-    @Operation(summary = "Step 4: 산업군 및 공식 해시태그 선택", description = "희망 산업군과 관련된 공식 해시태그를 선택합니다.")
+
+    /* ============================================================
+       Step 4 — 산업군
+    ============================================================ */
     @PutMapping("/{id}/industry")
-    public ApiResponse<SamplingRequestSummaryResponse> step4(@PathVariable Long id, @Valid @RequestBody IndustryRequest dto) {
+    @Operation(summary = "Step 4: 산업군 정보 저장")
+    public ApiResponse<SamplingRequestSummaryResponse> step4(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user,
+            @Valid @RequestBody IndustryRequest dto
+    ) {
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
         requestService.updateStep4(id, dto);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("산업군 정보 저장 완료", summary);
+
+        return ApiResponse.success(
+                "산업군 정보 저장 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    /** Step 5 */
-    @Operation(
-            summary = "Step 5: 제안서 업로드",
-            description = "학생단체가 샘플링 제안서를 S3에 업로드하고, 업로드 완료 후 요청 상태를 Submitted로 변경합니다."
-    )
+
+    /* ============================================================
+       Step 5 — 제안서 업로드
+    ============================================================ */
     @PostMapping(value = "/{id}/proposal", consumes = "multipart/form-data")
+    @Operation(summary = "Step 5: 제안서 업로드")
     public ApiResponse<SamplingRequestSummaryResponse> uploadProposal(
             @PathVariable Long id,
-            @Parameter(
-                    description = "제안서 파일 (PDF, DOCX 등)",
-                    required = true,
-                    content = @Content(
-                            mediaType = "multipart/form-data",
-                            schema = @Schema(type = "string", format = "binary")
-                    )
-            )
+            @AuthenticationPrincipal CustomUser user,
             @RequestPart("file") MultipartFile file
     ) throws Exception {
+
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
+        validateFile(file);
 
         requestService.uploadProposal(id, file);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("제안서 업로드 완료", summary);
+
+        return ApiResponse.success(
+                "제안서 업로드 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    @Operation(
-            summary = "Step 6: 요청 승인 (관리자)",
-            description = "관리자가 샘플링 요청을 승인합니다. 승인 시 상태는 Approved로 변경됩니다."
-    )
+
+    /* ============================================================
+       선택 기업 저장
+    ============================================================ */
+    @PostMapping("/{id}/companies")
+    @Operation(summary = "선택 기업 저장")
+    public ApiResponse<SamplingRequestSummaryResponse> saveSelectedCompanies(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user,
+            @RequestBody CompanySelectRequest dto
+    ) {
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
+
+        return ApiResponse.success(
+                "선택 기업 저장 완료",
+                requestService.saveSelectedCompanies(id, dto.companyIds())
+        );
+    }
+
+
+    /* ============================================================
+       관리자 승인 / 반려
+    ============================================================ */
     @PostMapping("/{id}/approve")
-    public ApiResponse<SamplingRequestSummaryResponse> approveRequest(@PathVariable Long id) {
+    @Operation(summary = "요청 승인 (관리자)")
+    public ApiResponse<SamplingRequestSummaryResponse> approveRequest(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        requireAdmin(user);
         requestService.approveRequest(id);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("승인 완료", summary);
+
+        return ApiResponse.success(
+                "승인 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    @Operation(
-            summary = "Step 6-1: 요청 반려 (관리자)",
-            description = "관리자가 샘플링 요청을 반려합니다. 상태는 Rejected로 변경됩니다."
-    )
     @PostMapping("/{id}/reject")
-    public ApiResponse<SamplingRequestSummaryResponse> rejectRequest(@PathVariable Long id) {
+    @Operation(summary = "요청 반려 (관리자)")
+    public ApiResponse<SamplingRequestSummaryResponse> rejectRequest(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        requireAdmin(user);
         requestService.rejectRequest(id);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("반려 완료", summary);
+
+        return ApiResponse.success(
+                "반려 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    /** 워크플로우 */
-    @Operation(
-            summary = "Step 7: 계약서 서명 (학생단체)",
-            description = "학생단체가 계약서를 확인 후 전자 서명을 완료합니다. 상태는 ContractApprovalPending으로 변경됩니다."
-    )
+
+    /* ============================================================
+       계약서 서명
+    ============================================================ */
     @PostMapping("/{id}/contract/sign")
+    @Operation(summary = "계약서 서명 (학생단체)")
     public ApiResponse<SamplingRequestSummaryResponse> signContract(
             @PathVariable Long id,
-            @Valid @RequestBody SignatureRequest signatureRequest,
-            Authentication auth
+            @AuthenticationPrincipal CustomUser user,
+            @Valid @RequestBody SignatureRequest signatureRequest
     ) {
-        com.uniConnect.member.security.local.CustomUser user =
-                (com.uniConnect.member.security.local.CustomUser) auth.getPrincipal();
-        Long userId = user.getUserId();
-        signatureService.saveSignature(signatureRequest, userId);
-        requestService.signContract(id, userId);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("계약서 서명 완료", summary);
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
+
+        signatureService.saveSignature(signatureRequest, user.getUserId());
+        requestService.signContract(id, user.getUserId());
+
+        return ApiResponse.success(
+                "계약서 서명 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    @Operation(
-            summary = "Step 8: 계약 승인 (관리자)",
-            description = "관리자가 학생단체의 계약서 서명을 승인합니다. 상태는 ReceiptPending으로 변경됩니다."
-    )
+
+    /* ============================================================
+       계약 승인 (관리자)
+    ============================================================ */
     @PostMapping("/{id}/contract/approve")
-    public ApiResponse<SamplingRequestSummaryResponse> approveContract(@PathVariable Long id) {
+    @Operation(summary = "계약 승인 (관리자)")
+    public ApiResponse<SamplingRequestSummaryResponse> approveContract(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        requireAdmin(user);
         requestService.approveContract(id);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("계약 승인 완료", summary);
+
+        return ApiResponse.success(
+                "계약 승인 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    @Operation(
-            summary = "Step 9: 인수증 업로드",
-            description = "제품 수령 후 인수증을 업로드합니다."
-    )
+
+    /* ============================================================
+       인수증 업로드
+    ============================================================ */
     @PostMapping(value = "/{id}/receipt", consumes = "multipart/form-data")
+    @Operation(summary = "인수증 업로드")
     public ApiResponse<SamplingRequestSummaryResponse> uploadReceipt(
             @PathVariable Long id,
-            @Parameter(
-                    description = "인수증 파일 (이미지, PDF 등)",
-                    required = true,
-                    content = @Content(
-                            mediaType = "multipart/form-data",
-                            schema = @Schema(type = "string", format = "binary")
-                    )
-            )
+            @AuthenticationPrincipal CustomUser user,
             @RequestPart("file") MultipartFile file
     ) throws Exception {
+
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
+        validateFile(file);
 
         requestService.uploadReceipt(id, file);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("인수증 업로드 완료", summary);
+
+        return ApiResponse.success(
+                "인수증 업로드 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    @Operation(
-            summary = "Step 9-1: 인수증 승인 (관리자)",
-            description = "관리자가 인수증을 승인하여 상태를 ReportPending으로 변경합니다."
-    )
+
     @PostMapping("/{id}/receipt/approve")
-    public ApiResponse<SamplingRequestSummaryResponse> approveReceipt(@PathVariable Long id) {
+    @Operation(summary = "인수증 승인 (관리자)")
+    public ApiResponse<SamplingRequestSummaryResponse> approveReceipt(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        requireAdmin(user);
+
         requestService.approveReceipt(id);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("인수증 승인 완료", summary);
+
+        return ApiResponse.success(
+                "인수증 승인 완료",
+                requestService.getSummary(id)
+        );
     }
 
-    @Operation(
-            summary = "Step 10: 리포트 업로드",
-            description = "행사 종료 후 리포트를 업로드합니다."
-    )
+
+    /* ============================================================
+       리포트 업로드
+    ============================================================ */
     @PostMapping(value = "/{id}/report", consumes = "multipart/form-data")
+    @Operation(summary = "리포트 업로드")
     public ApiResponse<SamplingRequestSummaryResponse> uploadReport(
             @PathVariable Long id,
-            @Parameter(
-                    description = "리포트 파일 (PDF 등)",
-                    required = true,
-                    content = @Content(
-                            mediaType = "multipart/form-data",
-                            schema = @Schema(type = "string", format = "binary")
-                    )
-            )
+            @AuthenticationPrincipal CustomUser user,
             @RequestPart("file") MultipartFile file
     ) throws Exception {
 
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
+        validateFile(file);
+
         requestService.uploadReport(id, file);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("리포트 업로드 완료", summary);
-    }
 
-    @Operation(
-            summary = "Step 10-1: 리포트 승인 (관리자)",
-            description = "관리자가 리포트를 승인하여 상태를 SurveyPending으로 변경합니다."
-    )
-    @PostMapping("/{id}/report/approve")
-    public ApiResponse<SamplingRequestSummaryResponse> approveReport(@PathVariable Long id) {
-        requestService.approveReport(id);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("리포트 승인 완료", summary);
-    }
-
-    @Operation(
-            summary = "Step 11: 설문 완료",
-            description = "모든 협업 절차 완료 후 학생단체가 설문을 완료 처리합니다. 상태는 Completed로 변경됩니다."
-    )
-    @PostMapping("/{id}/survey/complete")
-    public ApiResponse<SamplingRequestSummaryResponse> completeSurvey(@PathVariable Long id) {
-        requestService.completeSurvey(id);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("설문 완료", summary);
-    }
-
-    @Operation(summary = "샘플링 요청 제출", description = "입력된 모든 정보를 검증하고 요청 상태를 Submitted로 변경합니다.")
-    @PostMapping("/{id}/submit")
-    public ApiResponse<SamplingRequestSummaryResponse> submit(@PathVariable Long id) {
-        requestService.submit(id);
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("샘플링 요청 제출 완료", summary);
-    }
-
-    @Operation(summary = "샘플링 요청 요약 조회", description = "입력된 모든 정보를 종합하여 요약 정보를 반환합니다.")
-    @GetMapping("/{id}/summary")
-    public ApiResponse<SamplingRequestSummaryResponse> summary(@PathVariable Long id) {
-        SamplingRequestSummaryResponse summary = requestService.getSummary(id);
-        return ApiResponse.success("요약 조회 성공", summary);
-    }
-
-    @Operation(summary = "학생단체 샘플링 비용 정보 조회", description = "건당 수수료 및 보증금 안내")
-    @GetMapping("/fee")
-    public ApiResponse<FeeResponse> getSamplingFees() {
-        return ApiResponse.success(requestService.getFeeInformation());
-    }
-
-    @Operation(
-            summary = "학생단체 매칭 요청 제출",
-            description = """
-        학생단체가 기업에게 매칭 요청을 제출합니다.
-        요청이 성공하면 상태는 MatchingRequested로 변경되며,
-        '담당자 확인 후 단체 페이지를 통해 매칭 여부 전달' 메시지가 반환됩니다.
-        """
-    )
-    @PostMapping("/{id}/match/request")
-    public ApiResponse<String> requestMatching(@PathVariable Long id) {
-        requestService.requestMatching(id);
         return ApiResponse.success(
-                "UNI:CONNECT를 이용해주셔서 감사드립니다. 담당자 확인 후 단체 페이지를 통해 매칭 여부 전달드리겠습니다. (평균 24시간 소요됩니다.)"
+                "리포트 업로드 완료",
+                requestService.getSummary(id)
+        );
+    }
+
+
+    @PostMapping("/{id}/report/approve")
+    @Operation(summary = "리포트 승인 (관리자)")
+    public ApiResponse<SamplingRequestSummaryResponse> approveReport(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        requireAdmin(user);
+
+        requestService.approveReport(id);
+
+        return ApiResponse.success(
+                "리포트 승인 완료",
+                requestService.getSummary(id)
+        );
+    }
+
+
+    /* ============================================================
+       Survey 완료
+    ============================================================ */
+    @PostMapping("/{id}/survey/complete")
+    @Operation(summary = "설문 완료")
+    public ApiResponse<SamplingRequestSummaryResponse> completeSurvey(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
+        requestService.completeSurvey(id);
+
+        return ApiResponse.success(
+                "설문 완료",
+                requestService.getSummary(id)
+        );
+    }
+
+
+    /* ============================================================
+       제출 & 요약
+    ============================================================ */
+    @PostMapping("/{id}/submit")
+    @Operation(summary = "샘플링 요청 최종 제출")
+    public ApiResponse<SamplingRequestSummaryResponse> submit(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
+        requestService.submit(id);
+
+        return ApiResponse.success(
+                "샘플링 요청 제출 완료",
+                requestService.getSummary(id)
+        );
+    }
+
+    @GetMapping("/{id}/summary")
+    @Operation(summary = "요약 정보 조회")
+    public ApiResponse<SamplingRequestSummaryResponse> summary(
+            @PathVariable Long id
+    ) {
+        return ApiResponse.success(
+                "요약 조회 성공",
+                requestService.getSummary(id)
+        );
+    }
+
+
+    /* ============================================================
+       기타
+    ============================================================ */
+    @GetMapping("/fee")
+    @Operation(summary = "샘플링 비용 조회")
+    public ApiResponse<FeeResponse> getSamplingFees() {
+        return ApiResponse.success(
+                requestService.getFeeInformation()
+        );
+    }
+
+
+    @PostMapping("/{id}/match/request")
+    @Operation(summary = "학생단체 매칭 요청 제출")
+    public ApiResponse<String> requestMatching(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        requireOwner(user.getUserId(), requestService.getOwnerId(id));
+        requestService.requestMatching(id);
+
+        return ApiResponse.success(
+                "UNI:CONNECT를 이용해주셔서 감사합니다. 담당자 확인 후 단체 페이지를 통해 매칭 여부 전달드리겠습니다. (평균 24시간 소요됩니다.)"
         );
     }
 }
