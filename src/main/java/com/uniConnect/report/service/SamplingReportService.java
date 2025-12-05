@@ -207,4 +207,14 @@ public class SamplingReportService {
         report.setReportPdfUrl(pdfUrl);
         reportRepository.save(report);
     }
+
+    @Transactional
+    public void rejectReport(Long reportId) {
+        SamplingReport report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new CustomException(ErrorCode.REPORT_NOT_FOUND));
+
+        report.setStatus(SamplingReportStatus.Rejected);
+        reportRepository.save(report);
+    }
+
 }

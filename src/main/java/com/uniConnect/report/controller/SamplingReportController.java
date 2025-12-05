@@ -110,4 +110,11 @@ public class SamplingReportController {
         reportService.approveReport(reportId);
         return ApiResponse.success("리포트가 승인되었습니다.", null);
     }
+
+    @Operation(summary = "어드민 리포트 거절", description = "리포트를 거절합니다.")
+    @PostMapping("/{reportId}/reject")
+    public ApiResponse<String> rejectReport(@PathVariable Long reportId) {
+        reportService.rejectReport(reportId);
+        return ApiResponse.success("리포트가 거절되었습니다.", null);
+    }
 }
