@@ -21,11 +21,17 @@ public class CompanyInfoService {
 
     private final CompanyRepository companyRepository;
     private final IndustryRepository industryRepository;
+    private final UserRepository userRepository;
 
     public void updateCompanyInfo(Long userId, CompanySamplingInfoRequest dto) {
 
-        Company company = companyRepository.findByUsersUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("기업 정보를 찾을 수 없습니다."));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+
+        Company company = user.getCompany();
+        if (company == null) {
+            throw new IllegalArgumentException("해당 유저가 속한 기업이 없습니다.");
+        }
 
         if (dto.samplingStartDate().isAfter(dto.samplingEndDate())) {
             throw new IllegalArgumentException("샘플링 시작일은 종료일보다 늦을 수 없습니다.");
@@ -43,5 +49,4 @@ public class CompanyInfoService {
 
         companyRepository.save(company);
     }
-
 }

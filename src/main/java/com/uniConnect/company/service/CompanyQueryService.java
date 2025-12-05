@@ -28,7 +28,6 @@ public class CompanyQueryService {
 
         return companies.stream().map(company -> {
 
-            // CompanyProfile은 optional일 수 있음
             CompanyProfile profile =
                     profileRepository.findByCompanyCompanyId(company.getCompanyId()).orElse(null);
 
@@ -36,7 +35,6 @@ public class CompanyQueryService {
                     ? profile.getDescription()
                     : "";
 
-            // 한 줄 소개: 앞 40자만 추출
             String shortDesc = description.length() > 40
                     ? description.substring(0, 40) + "..."
                     : description;
@@ -49,6 +47,7 @@ public class CompanyQueryService {
                     .industryName(
                             company.getIndustry() != null ? company.getIndustry().getIndustryName() : null
                     )
+                    .used(false)
                     .build();
         }).toList();
     }

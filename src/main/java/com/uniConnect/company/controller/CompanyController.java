@@ -4,6 +4,9 @@ import com.uniConnect.company.dto.response.CompanyCardResponse;
 import com.uniConnect.company.dto.response.CompanyDetailResponse;
 import com.uniConnect.company.service.CompanyQueryService;
 import com.uniConnect.global.response.ApiResponse;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.uniConnect.member.security.local.CustomUser;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -13,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -23,6 +27,7 @@ import java.util.List;
 public class CompanyController {
 
     private final CompanyQueryService companyQueryService;
+    private Long studentOrgId;
 
     @Operation(summary = "기업 리스트 조회")
     @ApiResponses({
@@ -35,7 +40,9 @@ public class CompanyController {
             )
     })
     @GetMapping("/list")
-    public ApiResponse<List<CompanyCardResponse>> getCompanyList() {
+    public ApiResponse<List<CompanyCardResponse>> getCompanyList(
+            @AuthenticationPrincipal CustomUser user
+    ) {
         return ApiResponse.success(companyQueryService.getCompanyList());
     }
 

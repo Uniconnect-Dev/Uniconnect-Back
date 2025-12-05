@@ -12,4 +12,6 @@ public class CompanyCardResponse {
     private String logoUrl;
     private String shortDescription; // 한 줄 소개
     private String industryName; // 업종
+
+    private Boolean used;
 }
