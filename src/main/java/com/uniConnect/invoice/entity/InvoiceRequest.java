@@ -14,6 +14,9 @@ public class InvoiceRequest extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long invoiceRequestId;
 
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
     // --- 기본 정보 ---
     @Column(nullable = false)
     private String eventName;  // 행사명
