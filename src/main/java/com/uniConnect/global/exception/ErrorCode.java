@@ -65,7 +65,10 @@ public enum ErrorCode {
 
     // 전자서명 관련
     SIGNATURE_EXPIRED(HttpStatus.BAD_REQUEST, "서명 시간이 만료되었습니다."),
-    INVALID_SIGNATURE(HttpStatus.BAD_REQUEST, "서명 검증에 실패했습니다.");
+    INVALID_SIGNATURE(HttpStatus.BAD_REQUEST, "서명 검증에 실패했습니다."),
+
+    // 세금계산서 관련
+    INVALID_INVOICE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 세금계산서 발행 방식입니다.");
 
 
     private final HttpStatus status;
