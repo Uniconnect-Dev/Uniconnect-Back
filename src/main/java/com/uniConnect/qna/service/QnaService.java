@@ -39,55 +39,80 @@ public class QnaService {
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
 
-    // 문의 생성
+    // ----------------------------------------
+    // 기업 문의 생성 (JWT userId 기반)
+    // ----------------------------------------
     @Transactional
-    public Long createQna(QnaCreateRequest req) {
+    public Long createCompanyQna(QnaCreateRequest req, Long userId) {
 
-        QnaQuestion.QnaQuestionBuilder builder = QnaQuestion.builder()
-                .type(req.type())
+        Company company = companyRepository.findByMainContactId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
+
+        QnaQuestion question = QnaQuestion.builder()
+                .type(QnaType.Company)
+                .company(company)
                 .title(req.title())
                 .content(req.content())
                 .password(passwordEncoder.encode(req.password()))
                 .agreePersonalInfo(req.agreePersonalInfo())
                 .agreeNotification(req.agreeNotification())
-                .status(QuestionStatus.Pending);
+                .status(QuestionStatus.Pending)
+                .build();
 
-        // 기업 문의
-        if (req.type() == QnaType.Company) {
-            Company company = companyRepository.findById(req.companyId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
-            builder.company(company);
+        saveFiles(req, question);
+
+        return questionRepository.save(question).getQuestionId();
+    }
+
+    // ----------------------------------------
+    // 학생단체 문의 생성 (JWT userId 기반)
+    // ----------------------------------------
+    @Transactional
+    public Long createStudentOrgQna(QnaCreateRequest req, Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        StudentOrg org = user.getStudentOrg();
+        if (org == null) {
+            throw new CustomException(ErrorCode.ENTITY_NOT_FOUND);
         }
 
-        // 학생단체 문의
-        if (req.type() == QnaType.StudentOrg) {
-            StudentOrg org = studentOrgRepository.findById(req.studentOrgId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
-            builder.studentOrg(org);
-        }
+        QnaQuestion question = QnaQuestion.builder()
+                .type(QnaType.StudentOrg)
+                .studentOrg(org)
+                .title(req.title())
+                .content(req.content())
+                .password(passwordEncoder.encode(req.password()))
+                .agreePersonalInfo(req.agreePersonalInfo())
+                .agreeNotification(req.agreeNotification())
+                .status(QuestionStatus.Pending)
+                .build();
 
-        QnaQuestion question = builder.build();
+        saveFiles(req, question);
 
-        // 첨부파일 저장
-        if (req.fileUrls() != null && !req.fileUrls().isEmpty()) {
+        return questionRepository.save(question).getQuestionId();
+    }
+
+    // 공통 파일 저장 로직
+    private void saveFiles(QnaCreateRequest req, QnaQuestion question) {
+        if (req.fileUrls() != null) {
             for (int i = 0; i < req.fileUrls().size(); i++) {
                 QnaQuestionFile file = QnaQuestionFile.builder()
                         .question(question)
                         .fileUrl(req.fileUrls().get(i))
                         .originalFilename(req.originalNames().get(i))
                         .build();
-
                 question.getFiles().add(file);
             }
         }
-
-        return questionRepository.save(question).getQuestionId();
     }
 
-    // 문의 상세 조회
+    // ----------------------------------------
+    // 상세 조회
+    // ----------------------------------------
     @Transactional(readOnly = true)
     public QuestionDetailResponse getQuestion(Long id) {
-
         QnaQuestion question = questionRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
 
@@ -111,7 +136,9 @@ public class QnaService {
                 .build();
     }
 
-    // 관리자 답변 생성
+    // ----------------------------------------
+    // 관리자 답변
+    // ----------------------------------------
     @Transactional
     public void createAnswer(Long questionId, Long userId, String content) {
 
@@ -128,7 +155,69 @@ public class QnaService {
                 .build();
 
         answerRepository.save(answer);
-
         question.setStatus(QuestionStatus.AnswerCompleted);
     }
+
+    // ----------------------------------------
+    // 비밀번호 검증
+    // ----------------------------------------
+    @Transactional(readOnly = true)
+    public boolean verifyPassword(Long questionId, String inputPassword) {
+        QnaQuestion question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
+
+        return passwordEncoder.matches(inputPassword, question.getPassword());
+    }
+
+    // ----------------------------------------
+    // 기업 문의 목록 조회 (JWT 기반)
+    // ----------------------------------------
+    @Transactional(readOnly = true)
+    public List<QuestionDetailResponse> getCompanyQnaListByUser(Long userId) {
+
+        Company company = companyRepository.findByMainContactId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
+
+        return questionRepository.findAllByCompanyCompanyIdOrderByCreatedAtDesc(company.getCompanyId())
+                .stream()
+                .map(q -> QuestionDetailResponse.builder()
+                        .questionId(q.getQuestionId())
+                        .title(q.getTitle())
+                        .content(q.getContent())
+                        .status(q.getStatus().name())
+                        .createdAt(q.getCreatedAt())
+                        .answerContent(q.getAnswer() != null ? q.getAnswer().getContent() : null)
+                        .build())
+                .toList();
+    }
+
+    // ----------------------------------------
+    // 학생단체 문의 목록 조회 (JWT 기반)
+    // ----------------------------------------
+    @Transactional(readOnly = true)
+    public List<QuestionDetailResponse> getStudentOrgQnaListByUser(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        StudentOrg org = user.getStudentOrg();
+        if (org == null) {
+            throw new CustomException(ErrorCode.ENTITY_NOT_FOUND);
+        }
+
+        Long orgId = org.getStudentOrgId();
+
+        return questionRepository.findAllByStudentOrgStudentOrgIdOrderByCreatedAtDesc(orgId)
+                .stream()
+                .map(q -> QuestionDetailResponse.builder()
+                        .questionId(q.getQuestionId())
+                        .title(q.getTitle())
+                        .content(q.getContent())
+                        .status(q.getStatus().name())
+                        .createdAt(q.getCreatedAt())
+                        .answerContent(q.getAnswer() != null ? q.getAnswer().getContent() : null)
+                        .build())
+                .toList();
+    }
+
 }
