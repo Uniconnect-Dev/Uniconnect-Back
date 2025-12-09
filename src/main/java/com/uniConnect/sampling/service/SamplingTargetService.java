@@ -76,23 +76,35 @@ public class SamplingTargetService {
      */
     @Transactional(readOnly = true)
     public SamplingTargetResponseDto getTargetSelection(Long requestId) {
+
         SamplingRequest req = requestRepository.findById(requestId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
         List<SamplingTargetSelection> selections =
                 selectionRepository.findBySamplingRequest_SamplingRequestId(req.getSamplingRequestId());
 
-        Map<SamplingTargetCategory, List<String>> selected = new EnumMap<>(SamplingTargetCategory.class);
-        for (SamplingTargetCategory c : SamplingTargetCategory.values()) selected.put(c, new ArrayList<>());
+        Map<SamplingTargetCategory, List<String>> selected =
+                new EnumMap<>(SamplingTargetCategory.class);
+
+        for (SamplingTargetCategory c : SamplingTargetCategory.values()) {
+            selected.put(c, new ArrayList<>());
+        }
 
         for (SamplingTargetSelection s : selections) {
             selected.get(s.getCategory()).add(s.getTargetKeyword().getLabel());
         }
 
-        List<SamplingTargetOptionDto> c1Options = toOptionList(SamplingTargetCategory.BasicInfo);
-        List<SamplingTargetOptionDto> c2Options = toOptionList(SamplingTargetCategory.Lifestyle);
-        List<SamplingTargetOptionDto> c3Options = toOptionList(SamplingTargetCategory.EventNature);
-        List<SamplingTargetOptionDto> indOptions = toOptionList(SamplingTargetCategory.IndustryOfficial);
+        Map<String, List<SamplingTargetOptionDto>> c1Options =
+                toOptionList(SamplingTargetCategory.BasicInfo);
+
+        Map<String, List<SamplingTargetOptionDto>> c2Options =
+                toOptionList(SamplingTargetCategory.Lifestyle);
+
+        Map<String, List<SamplingTargetOptionDto>> c3Options =
+                toOptionList(SamplingTargetCategory.EventNature);
+
+        Map<String, List<SamplingTargetOptionDto>> indOptions =
+                toOptionList(SamplingTargetCategory.IndustryOfficial);
 
         return SamplingTargetResponseDto.builder()
                 .requestId(requestId)
@@ -100,6 +112,7 @@ public class SamplingTargetService {
                 .category2Keywords(selected.get(SamplingTargetCategory.Lifestyle))
                 .category3Keywords(selected.get(SamplingTargetCategory.EventNature))
                 .industryOfficialKeywords(selected.get(SamplingTargetCategory.IndustryOfficial))
+
                 .category1Options(c1Options)
                 .category2Options(c2Options)
                 .category3Options(c3Options)
@@ -108,15 +121,21 @@ public class SamplingTargetService {
     }
 
     /** 카테고리별 전체 옵션 목록 반환 */
-    private List<SamplingTargetOptionDto> toOptionList(SamplingTargetCategory category) {
-        return keywordRepository.findByCategoryAndIsActiveTrueOrderByLabelAsc(category)
-                .stream()
+    private Map<String, List<SamplingTargetOptionDto>> toOptionList(SamplingTargetCategory category) {
+
+        List<SamplingTargetKeyword> list =
+                keywordRepository.findByCategoryAndIsActiveTrueOrderByLabelAsc(category);
+
+        return list.stream()
                 .map(k -> SamplingTargetOptionDto.builder()
                         .keywordId(k.getTargetKeywordId())
                         .label(k.getLabel())
                         .description(k.getDescription())
+                        .subCategory(k.getSubCategory())
                         .build())
-                .collect(Collectors.toList());
+                .collect(Collectors.groupingBy(dto ->
+                        dto.getSubCategory() == null ? "DEFAULT" : dto.getSubCategory()
+                ));
     }
 
     /** 단일 카테고리 키워드 리스트 조회 */

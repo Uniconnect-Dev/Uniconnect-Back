@@ -9,4 +9,5 @@ public class SamplingTargetOptionDto {
     private Long keywordId;
     private String label;
     private String description;
+    private String subCategory;
 }

@@ -31,6 +31,9 @@ public class SamplingTargetKeyword {
     @Column(length = 255)
     private String description;
 
+    @Column(name = "sub_category", length = 50)
+    private String subCategory;
+
     @Column(nullable = false)
     private boolean isActive;
 
