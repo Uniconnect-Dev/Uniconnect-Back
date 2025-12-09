@@ -1,5 +1,7 @@
 package com.uniConnect.curation.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+
 import com.uniConnect.curation.dto.StudentOrgCompanyCurationRequest;
 import com.uniConnect.curation.dto.CompanyCurationResponse;
 import com.uniConnect.curation.service.StudentOrgCompanyCurationService;
@@ -24,6 +26,7 @@ public class StudentOrgCompanyCurationController {
     private final StudentOrgCompanyCurationService curationService;
     private final StudentOrgRepository studentOrgRepository;
 
+    @Operation(summary = "기업 큐레이션 추천", description = "학생단체의 요청 조건을 기반으로 적합한 기업 리스트를 반환합니다.")
     @PostMapping("/companies")
     public ApiResponse<List<CompanyCurationResponse>> curate(
             @AuthenticationPrincipal CustomUser user,

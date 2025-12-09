@@ -47,4 +47,7 @@ public class MatchingRequest {
     @OneToMany(mappedBy = "matching", cascade = CascadeType.ALL)
     @Builder.Default
     private List<Contract> contracts = new ArrayList<>();
+
+    @Column(name = "selected_company_id")
+    private Long selectedCompanyId;
 }

@@ -9,6 +9,10 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
+
+
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
@@ -25,8 +29,9 @@ public class Collaboration {
     private MatchingRequest matching;
 
     @Enumerated(EnumType.STRING)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
     @Column(name = "status", length = 20)
-    private CollaborationStatus status; // Ready, InProgress, WaitingReceipt, Completed
+    private CollaborationStatus status;
 
     @Column(name = "contract_url", columnDefinition = "text")
     private String contractUrl; // 전자계약 문서 URL
@@ -49,7 +54,7 @@ public class Collaboration {
     @OneToMany(mappedBy = "collaboration", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReceiptConfirmation> receipts;
 
-    @OneToMany(mappedBy = "collaboration", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "collaboration", orphanRemoval = true)
     private List<CollaborationReport> reports;
 
 
@@ -59,7 +64,7 @@ public class Collaboration {
 
     @PrePersist
     public void prePersist() {
-        this.status = CollaborationStatus.Ready;
+        this.status = CollaborationStatus.FindingCompany;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

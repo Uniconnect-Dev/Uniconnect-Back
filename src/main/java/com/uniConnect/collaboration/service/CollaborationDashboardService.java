@@ -181,7 +181,7 @@ public class CollaborationDashboardService {
 
 
         /* ===== 3. Collaboration 상태 변경 ===== */
-        collab.setStatus(CollaborationStatus.WaitingReceipt);
+        collab.setStatus(CollaborationStatus.WaitingReportUpload);
 
         upsertTask(
                 collab,
@@ -244,7 +244,6 @@ public class CollaborationDashboardService {
 
         productInfoRepository.save(info);
 
-        collab.setStatus(CollaborationStatus.InProgress);
         upsertTask(collab, TaskType.ProductInfo, TaskStatus.Done, "Company", null);
 
         return ProductInfoResponse.from(info);
@@ -272,10 +271,6 @@ public class CollaborationDashboardService {
         TaskStatus newStatus = req.getIsShipped() ? TaskStatus.Done : TaskStatus.InProgress;
 
         upsertTask(collab, TaskType.ShippingInfo, newStatus, "Company", null);
-
-        if (req.getIsShipped()) {
-            collab.setStatus(CollaborationStatus.WaitingReceipt);
-        }
 
         return ProductInfoResponse.from(latest);
     }
@@ -344,8 +339,6 @@ public class CollaborationDashboardService {
                 "Company",
                 req.getEventDate()
         );
-
-        collab.setStatus(CollaborationStatus.InProgress);
 
         return TaskResponse.from(task);
     }
