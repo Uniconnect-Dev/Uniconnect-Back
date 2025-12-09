@@ -146,7 +146,6 @@ public class CollaborationDashboardService {
 
         Collaboration collab = getCollab(req.getCollaborationId());
 
-        /* ===== 1. 인수증 이미지 업로드 ===== */
         String filename = receiptImage.getOriginalFilename();
         if (filename == null || filename.isBlank()) {
             filename = "receipt_" + System.currentTimeMillis() + ".png";
@@ -159,7 +158,6 @@ public class CollaborationDashboardService {
         String receiptUrl = "https://" + bucketName + ".s3.amazonaws.com/" + key;
 
 
-        /* ===== 2. ReceiptConfirmation 저장 ===== */
         ReceiptConfirmation receipt = ReceiptConfirmation.builder()
                 .collaboration(collab)
                 .receiptImageUrl(receiptUrl)

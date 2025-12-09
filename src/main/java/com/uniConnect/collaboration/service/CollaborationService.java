@@ -35,7 +35,6 @@ public class CollaborationService {
     public void requestMatching(Long collabId, Long companyId) {
         Collaboration col = getCollaboration(collabId);
 
-        // matching 객체에 기업 선택 저장 (필요 시 구현)
         if (col.getMatching() != null) {
             col.getMatching().setSelectedCompanyId(companyId);
         }
