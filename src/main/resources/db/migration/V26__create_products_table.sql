@@ -9,7 +9,7 @@ CREATE TABLE products (
     short_description VARCHAR(300),
 
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 -- FK: products.company_id → companies.company_id
