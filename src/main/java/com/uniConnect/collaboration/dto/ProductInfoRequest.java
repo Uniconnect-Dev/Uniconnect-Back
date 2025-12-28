@@ -4,6 +4,8 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProductInfoRequest {
     private Long collaborationId;
     private String productName;

@@ -30,6 +30,12 @@ public class MatchingRequest {
     @Column(name = "responded_at")
     private LocalDateTime respondedAt;
 
+    @Column(name = "expected_reach")
+    private Integer expectedReach;
+
+    @Column(name = "expected_participants")
+    private Integer expectedParticipants;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campaign_id")
     private Campaign campaign;
@@ -41,4 +47,7 @@ public class MatchingRequest {
     @OneToMany(mappedBy = "matching", cascade = CascadeType.ALL)
     @Builder.Default
     private List<Contract> contracts = new ArrayList<>();
+
+    @Column(name = "selected_company_id")
+    private Long selectedCompanyId;
 }

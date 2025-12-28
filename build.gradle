@@ -24,15 +24,22 @@ repositories {
 	mavenCentral()
 }
 
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'io.github.cdimascio:java-dotenv:5.2.2'
     testImplementation 'com.h2database:h2'
+
+    implementation 'org.apache.commons:commons-csv:1.10.0'
+    implementation 'org.apache.poi:poi:5.2.5'
+    implementation 'org.apache.poi:poi-ooxml:5.2.5'
 
     compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -52,8 +59,9 @@ dependencies {
 	//migration
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-database-postgresql'
+    implementation 'com.vladmihalcea:hibernate-types-60:2.21.1'
 
-	// Spring Cloud AWS (AWSpring) S3 starter
+    // Spring Cloud AWS (AWSpring) S3 starter
 	implementation platform("io.awspring.cloud:spring-cloud-aws-dependencies:3.4.0")
 	implementation "io.awspring.cloud:spring-cloud-aws-starter-s3"
     implementation 'io.awspring.cloud:spring-cloud-aws-s3:3.4.0'

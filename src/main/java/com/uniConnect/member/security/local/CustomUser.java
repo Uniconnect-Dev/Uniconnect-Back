@@ -8,7 +8,7 @@ import java.util.Collection;
 
 @Data
 public class CustomUser implements UserDetails {
-    private final Long usersId;
+    private final Long userId;
     private final String email;
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;

@@ -31,16 +31,20 @@ public class AuthService {
 
     public LocalLoginResp login(LocalLoginReq request) {
         // record 접근자: request.loginId(), request.password()
-        Authentication auth;
         LocalCredential cred = localCredentialRepository.findByLoginId(request.loginId())
                 .orElseThrow(() -> new BadCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다."));
 
         if (!passwordEncoder.matches(request.password(), cred.getPasswordHash())) {
             throw new BadCredentialsException("아이디 또는 비밀번호가 올바르지 않습니다.");
         }
+
         User user = cred.getUser();
-        // 토큰에 원하는 클레임 추가
         Map<String, Object> claims = new HashMap<>();
+        // ⭐ 추가
+        claims.put("userId", user.getUserId().toString());
+        claims.put("username", user.getUsername());
+        claims.put("role", user.getRole().name());
+
         String token = jwtUtil.generate(request.loginId(), claims);
 
         // Build LoginResp (fill known fields; userId can be null if not looked up here)

@@ -8,5 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class ReceiptSignRequestDto {
-    private String signatureFileUrl; // 인수증 서명 이미지
+    private String signatureBase64;
+    private String signedAt;
 }

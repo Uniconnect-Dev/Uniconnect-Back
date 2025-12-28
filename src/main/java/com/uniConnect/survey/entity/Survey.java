@@ -3,6 +3,7 @@ package com.uniConnect.survey.entity;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import jakarta.persistence.*;
 import lombok.*;
+import com.uniConnect.company.entity.Company;
 
 import java.time.LocalDateTime;
 
@@ -18,9 +19,13 @@ public class Survey {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long surveyId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_org_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "student_org_id", nullable = true)
     private StudentOrg studentOrg;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
     @OneToOne(mappedBy = "survey", cascade = CascadeType.ALL, orphanRemoval = true)
     private SurveyReport surveyReport;

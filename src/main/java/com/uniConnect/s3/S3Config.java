@@ -1,5 +1,6 @@
 package com.uniConnect.s3;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
@@ -8,10 +9,14 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 @Configuration
 public class S3Config {
+
+    @Value("${spring.cloud.aws.region.static}")
+    private String region;
+
     @Bean
     public S3Presigner s3Presigner() {
         return S3Presigner.builder()
-                .region(Region.AP_SOUTHEAST_2) // application.yml과 동일한 리전
+                .region(Region.of(region))  // application.properties 값 그대로 사용
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();
     }

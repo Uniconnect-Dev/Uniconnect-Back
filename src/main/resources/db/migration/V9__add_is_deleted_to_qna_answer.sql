@@ -1,0 +1,11 @@
+ALTER TABLE qna_answers
+ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE qna_answers
+ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();
+
+ALTER TABLE qna_question_files
+ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE qna_question_files
+ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();

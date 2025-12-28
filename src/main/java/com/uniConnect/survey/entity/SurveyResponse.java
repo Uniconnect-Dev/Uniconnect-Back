@@ -31,5 +31,5 @@ public class SurveyResponse {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "survey_id")
-    private SurveyTemplate survey;
+    private Survey survey;
 }

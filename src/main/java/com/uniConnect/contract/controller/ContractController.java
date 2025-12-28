@@ -72,9 +72,9 @@ public class ContractController {
     @PatchMapping("/{contractId}/status")
     public ResponseEntity<ApiResponse<ContractResponseDto>> updateStatus(
             @PathVariable Long contractId,
-            @RequestBody Map<String, String> body
+            @RequestBody ContractStatusUpdateRequest request
     ) {
-        ContractResponseDto updated = contractService.updateStatus(contractId, body.get("status"));
+        ContractResponseDto updated = contractService.updateStatus(contractId, request.getStatus());
         return ResponseEntity.ok(ApiResponse.success("계약 상태 변경 완료", updated));
     }
 }

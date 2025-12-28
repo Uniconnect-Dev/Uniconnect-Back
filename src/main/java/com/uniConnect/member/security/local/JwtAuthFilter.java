@@ -91,19 +91,33 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             
             if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtUtil.isValid(token)) {
-                    // Principal 추출
-                    String principal = jwtUtil.extractClaim(token, "username");
-                    if (principal == null || principal.isBlank()) {
-                        principal = jwtUtil.extractSubject(token);
+                    // ✅ JWT에서 필요한 정보 추출
+                    String subject = jwtUtil.extractSubject(token);
+                    String username = jwtUtil.extractClaim(token, "username");
+                    String role = jwtUtil.extractClaim(token, "role");
+                    String userIdStr = jwtUtil.extractClaim(token, "userId");
+
+                    Long userId = userIdStr != null ? Long.parseLong(userIdStr) : null;
+                    if (role == null || role.isBlank()) {
+                        role = "USER";
                     }
 
-                    // Role 추출
-                    String role = jwtUtil.extractClaim(token, "role");
                     var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
 
-                    // 인증 객체 생성
-                    var auth = new UsernamePasswordAuthenticationToken(principal, null, authorities);
-                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(req));
+                    // ✅ CustomUser 객체 생성
+                    CustomUser customUser = new CustomUser(
+                            userId,
+                            username != null ? username : subject,
+                            null,
+                            List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    );
+
+                    // ✅ CustomUser를 Principal로 저장
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            customUser,  // ✅ CustomUser 객체!
+                            null,
+                            customUser.getAuthorities()
+                    );
 
                     // SecurityContext 설정
                     SecurityContextHolder.getContext().setAuthentication(auth);

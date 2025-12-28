@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
 
 /**
  * 리포트 전체 상세 응답
@@ -38,8 +39,8 @@ public class ReportDetailResponseDto {
     @Data
     @Builder
     public static class Period {
-        private String startAt;
-        private String endAt;
+        private LocalDate startAt;
+        private LocalDate endAt;
     }
 
     @Data

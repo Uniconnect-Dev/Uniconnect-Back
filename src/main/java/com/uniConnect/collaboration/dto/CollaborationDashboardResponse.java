@@ -17,11 +17,14 @@ public class CollaborationDashboardResponse {
 
     private Long collaborationId;
     private CollaborationStatus collaborationStatus;
+    private String userRole;
 
     private List<TaskInfo> tasks;
     private List<ProductInfoBlock> products;
     private List<ContentUploadBlock> uploads;
     private ReceiptBlock latestReceipt;
+    private CompanySectionDto companySection;
+    private StudentSectionDto studentSection;
 
     @Data
     @Builder
@@ -71,53 +74,72 @@ public class CollaborationDashboardResponse {
             List<CollaborationTask> tasks,
             List<ProductInfo> products,
             List<ContentUpload> uploads,
-            List<ReceiptConfirmation> receipts
+            List<ReceiptConfirmation> receipts,
+            String role
     ) {
         ReceiptConfirmation latest = receipts.stream()
                 .reduce((a, b) -> b)
                 .orElse(null);
 
-        return CollaborationDashboardResponse.builder()
-                .collaborationId(collab.getId())
-                .collaborationStatus(collab.getStatus())
-                .tasks(tasks.stream()
-                        .map(t -> TaskInfo.builder()
-                                .type(t.getType())
-                                .status(t.getStatus())
-                                .deadline(t.getDeadline())
-                                .updatedBy(t.getUpdatedBy())
-                                .updatedAt(t.getUpdatedAt())
-                                .build())
-                        .toList())
-                .products(products.stream()
-                        .map(p -> ProductInfoBlock.builder()
-                                .productName(p.getProductName())
-                                .quantity(p.getQuantity())
-                                .description(p.getDescription())
-                                .imageUrl(p.getImageUrl())
-                                .logoUrl(p.getLogoUrl())
-                                .deliveryDate(p.getDeliveryDate())
-                                .isShipped(p.getIsShipped())
-                                .trackingNo(p.getTrackingNo())
-                                .build())
-                        .toList())
-                .uploads(uploads.stream()
-                        .map(u -> ContentUploadBlock.builder()
-                                .imageUrl(u.getImageUrl())
-                                .caption(u.getCaption())
-                                .uploaderType(u.getUploaderType().name())
-                                .uploadedAt(u.getUploadedAt())
-                                .build())
-                        .toList())
-                .latestReceipt(latest == null ? null :
-                        ReceiptBlock.builder()
-                                .receiverName(latest.getReceiverName())
-                                .location(latest.getLocation())
-                                .receiptImageUrl(latest.getReceiptImageUrl())
-                                .status(latest.getStatus())
-                                .submittedAt(latest.getSubmittedAt())
-                                .approvedAt(latest.getApprovedAt())
-                                .build())
-                .build();
+        // 빌더 생성
+        CollaborationDashboardResponse.CollaborationDashboardResponseBuilder builder =
+                CollaborationDashboardResponse.builder()
+                        .collaborationId(collab.getId())
+                        .collaborationStatus(collab.getStatus())
+                        .userRole(role)
+                        .tasks(tasks.stream()
+                                .map(t -> TaskInfo.builder()
+                                        .type(t.getType())
+                                        .status(t.getStatus())
+                                        .deadline(t.getDeadline())
+                                        .updatedBy(t.getUpdatedBy())
+                                        .updatedAt(t.getUpdatedAt())
+                                        .build())
+                                .toList())
+                        .products(products.stream()
+                                .map(p -> ProductInfoBlock.builder()
+                                        .productName(p.getProductName())
+                                        .quantity(p.getQuantity())
+                                        .description(p.getDescription())
+                                        .imageUrl(p.getImageUrl())
+                                        .logoUrl(p.getLogoUrl())
+                                        .deliveryDate(p.getDeliveryDate())
+                                        .isShipped(p.getIsShipped())
+                                        .trackingNo(p.getTrackingNo())
+                                        .build())
+                                .toList())
+                        .uploads(uploads.stream()
+                                .map(u -> ContentUploadBlock.builder()
+                                        .imageUrl(u.getImageUrl())
+                                        .caption(u.getCaption())
+                                        .uploaderType(u.getUploaderType().name())
+                                        .uploadedAt(u.getUploadedAt())
+                                        .build())
+                                .toList());
+
+        // 인수증이 있을 경우 세팅
+        if (latest != null) {
+            builder.latestReceipt(
+                    ReceiptBlock.builder()
+                            .receiverName(latest.getReceiverName())
+                            .location(latest.getLocation())
+                            .receiptImageUrl(latest.getReceiptImageUrl())
+                            .status(latest.getStatus())
+                            .submittedAt(latest.getSubmittedAt())
+                            .approvedAt(latest.getApprovedAt())
+                            .build()
+            );
+        }
+
+        CollaborationDashboardResponse response = builder.build();
+
+        // 역할별 필드 조정
+        if ("Company".equalsIgnoreCase(role)) {
+            response.setLatestReceipt(null);
+        } else if ("StudentOrg".equalsIgnoreCase(role)) {
+            response.getProducts().forEach(p -> p.setTrackingNo(null));
+        }
+
+        return response;
     }
 }

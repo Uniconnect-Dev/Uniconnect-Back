@@ -8,6 +8,9 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.List;
+import com.uniConnect.company.entity.Company;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -50,14 +53,20 @@ public class User implements UserDetails {
     private LocalDateTime createdAt;
 
     // 3) 연관관계 설정
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<StudentOrg> studentOrgs = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OAuthAccount> oauthAccounts = new ArrayList<>();
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private LocalCredential localCredential;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_org_id")
+    private StudentOrg studentOrg;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
+    private Company company;
 
     // ===== UserDetails 구현부 =====
 
@@ -102,11 +111,6 @@ public class User implements UserDetails {
     }
 
     // ===== 헬퍼 메서드 =====
-
-    public void addStudentOrg(StudentOrg org) {
-        this.studentOrgs.add(org);
-        org.setUser(this);
-    }
 
     public void addOAuthAccount(OAuthAccount account) {
         this.oauthAccounts.add(account);
