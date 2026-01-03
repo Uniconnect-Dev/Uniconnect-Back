@@ -43,39 +43,50 @@ public class SamplingMatchService {
     ===================================================== */
     @Transactional(readOnly = true)
     public List<StudentOrgSummaryResponse> getMatchedStudentOrgs(
-            Long samplingProposalId,
-            String schoolName,
-            Integer verificationLevel,
-            int baseUnitCost,
-            int reportOptionFee,
-            int operationFee
+            Long samplingProposalId
     ) {
         SamplingProposal proposal = samplingProposalRepository.findById(samplingProposalId)
                 .orElseThrow(() -> new IllegalArgumentException("샘플링 요청이 없습니다."));
 
-        // 기업이 선택한 타깃 키워드 (label 기준)
-        List<String> keywordLabels = proposal.getSelections().stream()
+        List<String> proposalLabels = proposal.getSelections().stream()
                 .map(SamplingTargetSelection::getSelectedLabel)
+                .map(String::toLowerCase)
                 .toList();
 
-        // 캠페인 기준으로 학생단체 후보 조회
-        List<Campaign> campaigns =
-                campaignRepository.findBySamplingTargetSelections(
-                        keywordLabels,
+        if (proposalLabels.isEmpty()) {
+            return List.of();
+        }
+
+        List<Campaign> candidates =
+                campaignRepository.findSamplingCampaignCandidates(
                         proposal.getSamplingStartDate(),
                         proposal.getSamplingEndDate(),
-                        schoolName,
-                        verificationLevel,
                         CollaborationType.Sampling,
                         CampaignStatus.Submitted
                 );
 
-        return campaigns.stream()
+        return candidates.stream()
+                .filter(campaign -> {
+                    List<String> campaignLabels =
+                            campaign.getCampaignTargets().stream()
+                                    .map(ct -> ct.getHashtag().getName().toLowerCase())
+                                    .toList();
+
+                    return campaignLabels.stream()
+                            .anyMatch(proposalLabels::contains);
+                })
                 .map(campaign -> {
-                    int participants = campaign.getExpectedParticipants();
-                    int cost = (participants * baseUnitCost)
-                            + reportOptionFee
-                            + operationFee;
+                    int expectedParticipants = campaign.getExpectedParticipants();
+                    int expectedExposures = campaign.getExpectedExposures();
+                    int boothFee = campaign.getBoothFee();
+
+                    double scaleFactor = calculateScaleFactor(expectedParticipants);
+
+                    int estimatedCost = (int) (
+                            (100 * expectedParticipants + 10 + expectedExposures)
+                                    * scaleFactor
+                                    + boothFee
+                    );
 
                     return StudentOrgSummaryResponse.builder()
                             .studentOrgId(campaign.getStudentOrg().getStudentOrgId())
@@ -87,11 +98,11 @@ public class SamplingMatchService {
                                             .map(ct -> ct.getHashtag().getName())
                                             .toList()
                             )
-                            .expectedParticipants(participants)
+                            .expectedParticipants(expectedParticipants)
                             .estimatedCostRange(
                                     String.format("%,d원 ~ %,d원",
-                                            cost - 100_000,
-                                            cost + 100_000)
+                                            estimatedCost - 100_000,
+                                            estimatedCost + 100_000)
                             )
                             .build();
                 })
@@ -249,5 +260,19 @@ public class SamplingMatchService {
                 baseUnitCost,
                 baseCost
         );
+    }
+
+    private double calculateScaleFactor(int expectedParticipants) {
+        if (expectedParticipants < 500) {
+            return 4.0;
+        } else if (expectedParticipants < 1000) {
+            return 3.0;
+        } else if (expectedParticipants < 2000) {
+            return 2.0;
+        } else if (expectedParticipants < 3000) {
+            return 1.7;
+        } else {
+            return 1.5;
+        }
     }
 }

@@ -26,24 +26,16 @@ public interface CampaignRepository extends JpaRepository<Campaign, Long> {
     );
 
     @Query("""
-        SELECT DISTINCT c
-        FROM Campaign c
-        JOIN c.campaignTargets ct
-        JOIN ct.hashtag h
-        WHERE h.name IN :labels
-          AND c.collaborationType = :collaborationType
-          AND c.status = :status
-          AND c.startDate <= :proposalEndDate
-          AND c.endDate >= :proposalStartDate
-          AND (:schoolName IS NULL OR c.studentOrg.schoolName = :schoolName)
-          AND (:verificationLevel IS NULL OR c.studentOrg.verificationLevel >= :verificationLevel)
-    """)
-    List<Campaign> findBySamplingTargetSelections(
-            @Param("labels") List<String> labels,
+    SELECT DISTINCT c
+    FROM Campaign c
+    WHERE c.collaborationType = :collaborationType
+      AND c.status = :status
+      AND c.startDate <= :proposalEndDate
+      AND c.endDate >= :proposalStartDate
+""")
+    List<Campaign> findSamplingCampaignCandidates(
             @Param("proposalStartDate") LocalDate proposalStartDate,
             @Param("proposalEndDate") LocalDate proposalEndDate,
-            @Param("schoolName") String schoolName,
-            @Param("verificationLevel") Integer verificationLevel,
             @Param("collaborationType") CollaborationType collaborationType,
             @Param("status") CampaignStatus status
     );

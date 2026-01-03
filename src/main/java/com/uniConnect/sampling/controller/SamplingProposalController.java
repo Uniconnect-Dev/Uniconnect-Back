@@ -65,32 +65,10 @@ public class SamplingProposalController {
     @Operation(summary = "3페이지: 매칭 학생단체 조회")
     public ApiResponse<List<StudentOrgSummaryResponse>> getMatchedOrgs(
             @Parameter(description = "샘플링 요청 ID")
-            @PathVariable Long samplingProposalId,
-
-            @Parameter(description = "학교명")
-            @RequestParam(required = false) String schoolName,
-
-            @Parameter(description = "검증 레벨")
-            @RequestParam(required = false) Integer verificationLevel,
-
-            @Parameter(description = "기본 단가")
-            @RequestParam int baseUnitCost,
-
-            @Parameter(description = "리포트 옵션 비용")
-            @RequestParam int reportOptionFee,
-
-            @Parameter(description = "운영비")
-            @RequestParam int operationFee
+            @PathVariable Long samplingProposalId
     ) {
         return ApiResponse.success(
-                samplingMatchService.getMatchedStudentOrgs(
-                        samplingProposalId,
-                        schoolName,
-                        verificationLevel,
-                        baseUnitCost,
-                        reportOptionFee,
-                        operationFee
-                )
+                samplingMatchService.getMatchedStudentOrgs(samplingProposalId)
         );
     }
 
