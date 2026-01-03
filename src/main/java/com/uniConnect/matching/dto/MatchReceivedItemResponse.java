@@ -11,8 +11,7 @@ public class MatchReceivedItemResponse {
     private Long senderId;
 
     private String senderName;
-    private String eventTitle;
+    private String campaignTitle;
     private String collaborationType;
-    private LocalDate desiredDate;
     private LocalDateTime requestedAt;
 }

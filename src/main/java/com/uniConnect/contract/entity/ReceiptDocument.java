@@ -1,6 +1,6 @@
 package com.uniConnect.contract.entity;
 
-import com.uniConnect.campaign.entity.MatchingRequest;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -32,6 +32,6 @@ public class ReceiptDocument {
     private LocalDateTime signedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "matching_id")
-    private MatchingRequest matching;
+    @JoinColumn(name = "match_request_id")
+    private CollaborationMatchRequest matchRequest;
 }

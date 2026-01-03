@@ -1,0 +1,2 @@
+ALTER TABLE qna_questions
+ALTER COLUMN password DROP NOT NULL;

@@ -1,6 +1,7 @@
 package com.uniConnect.contract.entity;
 
-import com.uniConnect.campaign.entity.MatchingRequest;
+import com.uniConnect.collaboration.entity.Collaboration;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import com.uniConnect.common.entity.BaseEntity;
 import com.uniConnect.contract.enums.ContractStatus;
 import jakarta.persistence.*;
@@ -60,49 +61,32 @@ public class Contract extends BaseEntity {
     private LocalDateTime receiptSignedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "matching_id")
-    private MatchingRequest matching;
+    @JoinColumn(name = "collaboration_id", nullable = false)
+    private Collaboration collaboration;
 
-    // 연관관계 편의 메서드 (양방향)
-    public void setMatching(MatchingRequest matching) {
-        this.matching = matching;
-        if (matching != null && matching.getContracts() != null && !matching.getContracts().contains(this)) {
-            matching.getContracts().add(this);
-        }
-    }
-
-    // 학생 계약서 서명
     public void markStudentSigned(String signatureUrl) {
         this.studentSigned = true;
         this.studentSignedAt = LocalDateTime.now();
         this.signatureFileUrl = signatureUrl;
 
-        // 학생은 싸인했지만 회사는 아직
-        if (Boolean.TRUE.equals(this.companySigned)) {
-            this.status = ContractStatus.Signed;
-        } else {
-            this.status = ContractStatus.StudentSigned;
-        }
+        this.status = Boolean.TRUE.equals(this.companySigned)
+                ? ContractStatus.Signed
+                : ContractStatus.StudentSigned;
     }
 
-    // 회사(운영측/admin) 계약서 서명
     public void markCompanySigned(String companySignatureUrl) {
         this.companySigned = true;
         this.companySignedAt = LocalDateTime.now();
         this.companySignatureFileUrl = companySignatureUrl;
 
-        // 양쪽 다 싸인했으면 Signed
         if (Boolean.TRUE.equals(this.studentSigned)) {
             this.status = ContractStatus.Signed;
         }
     }
 
-    // 인수증 서명
     public void markReceiptSigned(String receiptSignatureUrl) {
         this.receiptSignatureFileUrl = receiptSignatureUrl;
         this.receiptSignedAt = LocalDateTime.now();
-
-        // 인수증 서명 완료되면 최종적으로 ReceiptSigned
         this.status = ContractStatus.ReceiptSigned;
     }
 }

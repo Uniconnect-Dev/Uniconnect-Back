@@ -12,9 +12,8 @@ public class MatchSentItemResponse {
     private Long targetId;       // 기업 ID 또는 학생단체 ID
 
     private String targetName;
-    private String eventTitle;
+    private String campaignTitle;
     private String collaborationType;
-    private LocalDate desiredDate;
 
     private LocalDateTime requestedAt;
     private LocalDateTime respondedAt;

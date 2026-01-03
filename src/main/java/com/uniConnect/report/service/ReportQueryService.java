@@ -89,7 +89,9 @@ public class ReportQueryService {
 
         return reports.stream()
                 .map(r -> {
-                    var c = r.getCampaign();
+                    var c = r.getCollaboration()
+                            .getMatchRequest()
+                            .getCampaign();
 
                     return ReportListResponseDto.builder()
                             .reportId(r.getReportId())
@@ -114,7 +116,8 @@ public class ReportQueryService {
         SamplingReport report = samplingReportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("리포트를 찾을 수 없습니다."));
 
-        var campaign = report.getCampaign();
+        var campaign = report.getCollaboration().getMatchRequest()
+                .getCampaign();
 
         return ReportDetailResponseDto.builder()
                 .basicInfo(
