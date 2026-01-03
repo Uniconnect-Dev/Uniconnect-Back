@@ -1,15 +1,15 @@
 package com.uniConnect.qna.controller;
 
 import com.uniConnect.global.response.ApiResponse;
-import com.uniConnect.qna.dto.QnaCreateRequest;
-import com.uniConnect.qna.dto.QuestionDetailResponse;
-import com.uniConnect.qna.dto.VerifyPasswordRequest;
+import com.uniConnect.qna.dto.*;
+import com.uniConnect.qna.enums.*;
 import com.uniConnect.qna.service.QnaService;
 
 import lombok.RequiredArgsConstructor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,70 +27,71 @@ public class QnaController {
     private final QnaService service;
 
     // -----------------------------
-    // 기업 문의 생성
+    // 기업&학생단체 공용 문의 생성
     // -----------------------------
-    @Operation(summary = "기업 문의 작성", description = "로그인한 기업 사용자로 Q&A 문의를 등록합니다.")
-    @PostMapping("/company")
-    public ApiResponse<Long> createCompanyQna(
+    @PostMapping(consumes = "multipart/form-data")
+    @Operation(summary = "Q&A 문의 등록 (기업/학생단체 공용)")
+    public ApiResponse<Long> createQna(
             @AuthenticationPrincipal CustomUser user,
-            @RequestBody QnaCreateRequest req
-    ) {
-        return ApiResponse.success(service.createCompanyQna(req, user.getUserId()));
-    }
 
-    // -----------------------------
-    // 학생단체 문의 생성
-    // -----------------------------
-    @Operation(summary = "학생단체 문의 작성", description = "로그인한 학생단체 사용자로 Q&A 문의를 등록합니다.")
-    @PostMapping("/student-org")
-    public ApiResponse<Long> createStudentOrgQna(
-            @AuthenticationPrincipal CustomUser user,
-            @RequestBody QnaCreateRequest req
+            @RequestParam String title,
+            @RequestParam String content,
+
+            @RequestPart(required = false)
+            List<MultipartFile> files,
+
+            @RequestParam Boolean agreePersonalInfo,
+            @RequestParam Boolean agreeNotification
     ) {
-        return ApiResponse.success(service.createStudentOrgQna(req, user.getUserId()));
+        return ApiResponse.success(
+                service.createQna(
+                        user.getUserId(),
+                        title,
+                        content,
+                        files,
+                        agreePersonalInfo,
+                        agreeNotification
+                )
+        );
     }
 
     // -----------------------------
     // 상세 조회
     // -----------------------------
-    @Operation(summary = "문의 상세 조회", description = "특정 문의 내용과 답변 내용을 조회합니다.")
     @GetMapping("/{id}")
+    @Operation(summary = "문의 상세 조회")
     public ApiResponse<QuestionDetailResponse> get(@PathVariable Long id) {
         return ApiResponse.success(service.getQuestion(id));
     }
 
-    // -----------------------------
-    // 비밀번호 검증
-    // -----------------------------
-    @Operation(summary = "비밀번호 검증", description = "비밀번호가 맞으면 상세 조회 가능.")
-    @PostMapping("/{id}/verify-password")
-    public ApiResponse<Boolean> verifyPassword(
-            @PathVariable Long id,
-            @RequestBody VerifyPasswordRequest req
-    ) {
-        return ApiResponse.success(service.verifyPassword(id, req.password()));
-    }
-
-    // -----------------------------
-    // 기업 문의 리스트 조회 (JWT 기반)
-    // -----------------------------
-    @Operation(summary = "기업 문의 목록 조회", description = "로그인한 기업 계정의 문의 목록을 조회합니다.")
-    @GetMapping("/company/list")
-    public ApiResponse<List<QuestionDetailResponse>> getCompanyQnaList(
+    @GetMapping("/my")
+    @Operation(summary = "내 문의 목록 + 상태별 개수 조회")
+    public ApiResponse<MyQnaSummaryResponse> myQna(
             @AuthenticationPrincipal CustomUser user
     ) {
-        return ApiResponse.success(service.getCompanyQnaListByUser(user.getUserId()));
+        return ApiResponse.success(
+                service.getMyQnaSummary(user.getUserId())
+        );
     }
 
-    // -----------------------------
-    // 학생단체 문의 리스트 조회 (JWT 기반)
-    // -----------------------------
-    @Operation(summary = "학생단체 문의 목록 조회", description = "로그인한 학생단체 계정의 문의 목록을 조회합니다.")
-    @GetMapping("/student-org/list")
-    public ApiResponse<List<QuestionDetailResponse>> getStudentOrgQnaList(
+    @GetMapping("/my/pending")
+    @Operation(summary = "내 답변 전 문의 목록 조회")
+    public ApiResponse<List<QuestionDetailResponse>> myPendingQna(
             @AuthenticationPrincipal CustomUser user
     ) {
-        return ApiResponse.success(service.getStudentOrgQnaListByUser(user.getUserId()));
+        return ApiResponse.success(
+                service.getMyQnaByStatus(user.getUserId(), QuestionStatus.Pending)
+        );
+    }
+
+    @GetMapping("/my/answered")
+    @Operation(summary = "내 답변 완료 문의 목록 조회")
+    public ApiResponse<List<QuestionDetailResponse>> myAnsweredQna(
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        return ApiResponse.success(
+                service.getMyQnaByStatus(user.getUserId(), QuestionStatus.AnswerCompleted)
+        );
     }
 
     // -----------------------------
