@@ -1,33 +1,27 @@
 package com.uniConnect.collaboration.service;
 
-import com.uniConnect.sampling.entity.SamplingRequest;
-import com.uniConnect.sampling.repository.SamplingRequestRepository;
 import com.uniConnect.collaboration.dto.*;
 import com.uniConnect.collaboration.entity.*;
 import com.uniConnect.collaboration.enums.*;
 import com.uniConnect.collaboration.repository.*;
-import com.uniConnect.common.service.FileStorageService;
-import com.uniConnect.signature.dto.SignatureRequest;
-import com.uniConnect.campaign.repository.MatchingRequestRepository;
-import com.uniConnect.member.enums.UserRole;
 import com.uniConnect.company.entity.Company;
-import com.uniConnect.global.exception.ErrorCode;
 import com.uniConnect.global.exception.CustomException;
-import com.uniConnect.signature.service.SignatureService;
+import com.uniConnect.global.exception.ErrorCode;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import com.uniConnect.s3.S3FileService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.access.AccessDeniedException;
 
-import java.util.Optional;
-import java.util.List;
+import java.util.Comparator;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -40,54 +34,37 @@ public class CollaborationDashboardService {
     private final ProductInfoRepository productInfoRepository;
     private final ContentUploadRepository contentUploadRepository;
     private final ReceiptConfirmationRepository receiptRepository;
-    private final S3FileService s3FileService;
-    private final ShippingInfoRepository shippingInfoRepository;
     private final StudentReceiveInfoRepository studentReceiveInfoRepository;
-    private final MatchingRequestRepository matchingRequestRepository;
-    private final SignatureService signatureService;
-    private final SamplingRequestRepository samplingRequestRepository;
+    private final S3FileService s3FileService;
 
     @Value("${app.s3.bucket}")
     private String bucketName;
 
-
-    /* ==========================================================
-                     공통 유틸 / 검증 함수
-    ========================================================== */
+    /* ================= 공통 유틸 ================= */
 
     private Collaboration getCollab(Long id) {
         return collaborationRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
     }
 
-    public Long getOwnerId(Long requestId) {
-        SamplingRequest req = samplingRequestRepository.findById(requestId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-
-        return req.getUser().getUserId();
-    }
-
-    private LocalDate safeParse(String value) {
-        if (value == null || value.isBlank()) return null;
-        return LocalDate.parse(value);
+    private CollaborationMatchRequest getMatchRequest(Collaboration collab) {
+        CollaborationMatchRequest match = collab.getMatchRequest();
+        if (match == null) {
+            throw new CustomException(ErrorCode.ENTITY_NOT_FOUND);
+        }
+        return match;
     }
 
     private void validateCompanyOwnership(Collaboration collab, Long userId) {
+        Company company = collab.getMatchRequest().getCompany();
 
-        var campaign = collab.getMatching().getCampaign();
-
-        if (campaign == null || campaign.getCompany() == null) {
-            throw new AccessDeniedException("기업 정보 없음");
-        }
-
-        boolean isOwner = campaign.getCompany().getUsers().stream()
+        boolean isOwner = company.getUsers().stream()
                 .anyMatch(u -> u.getUserId().equals(userId));
 
         if (!isOwner) {
-            throw new AccessDeniedException("기업 소유 계정 아님");
+            throw new AccessDeniedException("기업 소유 계정이 아닙니다.");
         }
     }
-
 
     private CollaborationTask upsertTask(
             Collaboration collab,
@@ -116,12 +93,9 @@ public class CollaborationDashboardService {
         return taskRepository.save(task);
     }
 
+    /* ================= (1) 수령 정보 ================= */
 
-    /* ==========================================================
-                   (1) 학생단체 수령 정보 저장
-    ========================================================== */
     public StudentReceiveInfo saveReceiveInfo(StudentReceiveInfoRequest req) {
-
         Collaboration collab = getCollab(req.getCollaborationId());
 
         StudentReceiveInfo info = StudentReceiveInfo.builder()
@@ -134,111 +108,61 @@ public class CollaborationDashboardService {
         return studentReceiveInfoRepository.save(info);
     }
 
+    /* ================= (2) 인수증 제출 ================= */
 
-    /* ==========================================================
-                    (2) 학생단체 인수증 제출
-    ========================================================== */
     public ReceiptResponse submitReceipt(
             ReceiptSubmitRequest req,
-            MultipartFile receiptImage,
-            Long userId
+            MultipartFile receiptImage
     ) throws Exception {
 
         Collaboration collab = getCollab(req.getCollaborationId());
 
-        String filename = receiptImage.getOriginalFilename();
-        if (filename == null || filename.isBlank()) {
-            filename = "receipt_" + System.currentTimeMillis() + ".png";
-        }
-
-        String key = "collaboration/" + collab.getId() + "/receipt/" + filename;
+        String key = "collaboration/" + collab.getId() + "/receipt/" +
+                System.currentTimeMillis() + "_" + receiptImage.getOriginalFilename();
 
         s3FileService.upload(bucketName, key, receiptImage);
 
-        String receiptUrl = "https://" + bucketName + ".s3.amazonaws.com/" + key;
-
-
         ReceiptConfirmation receipt = ReceiptConfirmation.builder()
                 .collaboration(collab)
-                .receiptImageUrl(receiptUrl)
+                .receiptImageUrl("https://" + bucketName + ".s3.amazonaws.com/" + key)
                 .receiverName(req.getReceiverName())
                 .location(req.getLocation())
                 .receivedQuantity(req.getReceivedQuantity())
                 .hasDefect(req.getHasDefect())
                 .expirationDate(
-                        req.getExpirationDate() != null ? LocalDate.parse(req.getExpirationDate()) : null
+                        req.getExpirationDate() != null
+                                ? LocalDate.parse(req.getExpirationDate())
+                                : null
                 )
                 .receivedAt(LocalDateTime.now())
                 .submittedAt(LocalDateTime.now())
-                .status(ReceiptStatus.WaitingApproval)
                 .signatureImageBase64(req.getSignatureImage())
                 .signatureTimestamp(req.getTimestamp())
+                .status(ReceiptStatus.WaitingApproval)
                 .build();
 
         receiptRepository.save(receipt);
 
-
-        /* ===== 3. Collaboration 상태 변경 ===== */
         collab.setStatus(CollaborationStatus.WaitingReportUpload);
 
-        upsertTask(
-                collab,
-                TaskType.Receipt,
-                TaskStatus.InProgress,
-                "StudentOrg",
-                null
-        );
+        upsertTask(collab, TaskType.Receipt, TaskStatus.InProgress, "StudentOrg", null);
 
         return ReceiptResponse.from(receipt);
     }
 
+    /* ================= (3) 제품 정보 ================= */
 
-    /* ==========================================================
-                    (3) 기업 인수증 승인
-    ========================================================== */
-    public ReceiptResponse approveReceipt(Long collaborationId, Long userId) {
-
-        Collaboration collab = getCollab(collaborationId);
-        validateCompanyOwnership(collab, userId);
-
-        ReceiptConfirmation latest = receiptRepository
-                .findTopByCollaborationOrderBySubmittedAtDesc(collab)
-                .orElseThrow(() -> new IllegalStateException("업로드된 인수증이 없습니다."));
-
-        latest.setStatus(ReceiptStatus.Approved);
-        latest.setApprovedAt(LocalDateTime.now());
-        receiptRepository.save(latest);
-
-        collab.setStatus(CollaborationStatus.Completed);
-
-        upsertTask(
-                collab,
-                TaskType.Receipt,
-                TaskStatus.Done,
-                "Company",
-                null
-        );
-
-        return ReceiptResponse.from(latest);
-    }
-
-
-    /* ==========================================================
-                 (4) 기업 - 제품 정보 등록
-    ========================================================== */
     public ProductInfoResponse addOrUpdateProductInfo(ProductInfoRequest req, Long userId) {
-
         Collaboration collab = getCollab(req.getCollaborationId());
         validateCompanyOwnership(collab, userId);
 
-        ProductInfo info = ProductInfo.builder()
-                .collaboration(collab)
-                .productName(req.getProductName())
-                .quantity(req.getQuantity())
-                .description(req.getDescription())
-                .providedBy(UploaderType.Company)
-                .isShipped(false)
-                .build();
+        List<ProductInfo> infos = productInfoRepository.findByCollaboration(collab);
+        ProductInfo info = infos.isEmpty()
+                ? ProductInfo.builder().collaboration(collab).build()
+                : infos.get(0);
+
+        info.setProductName(req.getProductName());
+        info.setQuantity(req.getQuantity());
 
         productInfoRepository.save(info);
 
@@ -247,12 +171,66 @@ public class CollaborationDashboardService {
         return ProductInfoResponse.from(info);
     }
 
+    /* ================= (4) 콘텐츠 업로드 ================= */
 
-    /* ==========================================================
-                 (5) 기업 - 배송 정보 입력
-    ========================================================== */
-    public ProductInfoResponse updateShippingInfo(ShippingInfoRequest req, Long userId) {
+    public ContentUploadResponse uploadContentToS3(
+            Long collaborationId,
+            String uploaderType,
+            String caption,
+            MultipartFile image
+    ) throws Exception {
 
+        Collaboration collab = getCollab(collaborationId);
+
+        String key = "collaboration/" + collab.getId() + "/content/" +
+                System.currentTimeMillis() + "_" + image.getOriginalFilename();
+
+        s3FileService.upload(bucketName, key, image);
+
+        UploaderType uploader = UploaderType.valueOf(uploaderType);
+
+        ContentUpload upload = ContentUpload.builder()
+                .collaboration(collab)
+                .uploaderType(uploader)
+                .imageUrl("https://" + bucketName + ".s3.amazonaws.com/" + key)
+                .caption(caption)
+                .uploadedAt(LocalDateTime.now())
+                .build();
+
+        contentUploadRepository.save(upload);
+
+        return ContentUploadResponse.from(upload);
+    }
+
+    /* ================= (5) 인수증 승인 ================= */
+
+    public ReceiptResponse approveReceipt(Long collaborationId, Long userId) {
+        Collaboration collab = getCollab(collaborationId);
+        validateCompanyOwnership(collab, userId);
+
+        List<ReceiptConfirmation> receipts =
+                receiptRepository.findByCollaboration(collab);
+
+        if (receipts.isEmpty()) {
+            throw new CustomException(ErrorCode.ENTITY_NOT_FOUND);
+        }
+
+        ReceiptConfirmation receipt = receipts.get(0);
+        receipt.setStatus(ReceiptStatus.Approved);
+        receipt.setApprovedAt(LocalDateTime.now());
+        collab.setStatus(CollaborationStatus.WaitingReportUpload);
+
+        receiptRepository.save(receipt);
+
+        upsertTask(collab, TaskType.Receipt, TaskStatus.Done, "Company", null);
+
+        return ReceiptResponse.from(receipt);
+    }
+    // (5) 기업 - 배송 정보 입력
+    public ProductInfoResponse updateShippingInfo(
+            ShippingInfoRequest req,
+            Long userId
+    ) {
         Collaboration collab = getCollab(req.getCollaborationId());
         validateCompanyOwnership(collab, userId);
 
@@ -266,67 +244,22 @@ public class CollaborationDashboardService {
 
         productInfoRepository.save(latest);
 
-        TaskStatus newStatus = req.getIsShipped() ? TaskStatus.Done : TaskStatus.InProgress;
-
-        upsertTask(collab, TaskType.ShippingInfo, newStatus, "Company", null);
+        upsertTask(
+                collab,
+                TaskType.ShippingInfo,
+                req.getIsShipped() ? TaskStatus.Done : TaskStatus.InProgress,
+                "Company",
+                null
+        );
 
         return ProductInfoResponse.from(latest);
     }
 
-
-    /* ==========================================================
-         (6) 기업/학생단체 - S3 이미지 업로드
-    ========================================================== */
-    public ContentUploadResponse uploadContentToS3(
-            Long collaborationId,
-            String uploaderTypeStr,
-            String caption,
-            MultipartFile image
-    ) throws Exception {
-
-        Collaboration collab = getCollab(collaborationId);
-
-        String filename = image.getOriginalFilename();
-        if (filename == null || filename.isBlank()) {
-            filename = "upload_" + System.currentTimeMillis() + ".png";
-        }
-
-        String key = "collaboration/" + collaborationId + "/uploads/" + filename;
-
-        s3FileService.upload(bucketName, key, image);
-        String url = "https://" + bucketName + ".s3.amazonaws.com/" + key;
-
-        UploaderType uploader = switch (uploaderTypeStr.toLowerCase()) {
-            case "company" -> UploaderType.Company;
-            case "admin" -> UploaderType.Admin;
-            default -> UploaderType.StudentOrg;
-        };
-
-        ContentUpload upload = ContentUpload.builder()
-                .collaboration(collab)
-                .imageUrl(url)
-                .caption(caption)
-                .uploaderType(uploader)
-                .build();
-
-        contentUploadRepository.save(upload);
-
-        TaskStatus status =
-                (uploader == UploaderType.StudentOrg)
-                        ? TaskStatus.Done
-                        : TaskStatus.InProgress;
-
-        upsertTask(collab, TaskType.ContentShare, status, uploader.name(), null);
-
-        return ContentUploadResponse.from(upload);
-    }
-
-
-    /* ==========================================================
-                  (7) 기업 - 행사 날짜 픽스
-    ========================================================== */
-    public TaskResponse fixEventDate(DateFixRequest req, Long userId) {
-
+    // (7) 기업 - 행사 날짜 픽스
+    public TaskResponse fixEventDate(
+            DateFixRequest req,
+            Long userId
+    ) {
         Collaboration collab = getCollab(req.getCollaborationId());
         validateCompanyOwnership(collab, userId);
 
@@ -342,9 +275,8 @@ public class CollaborationDashboardService {
     }
 
 
-    /* ==========================================================
-                (8) 협업 대시보드 조회
-    ========================================================== */
+    /* ================= (6) 대시보드 조회 ================= */
+
     @Transactional(readOnly = true)
     public CollaborationDashboardResponse getDashboard(
             Long collaborationId,
@@ -353,13 +285,15 @@ public class CollaborationDashboardService {
     ) {
 
         Collaboration collab = getCollab(collaborationId);
-        Long matchingId = collab.getMatching().getMatchingId();
+        CollaborationMatchRequest match = collab.getMatchRequest();
 
         boolean hasAccess = switch (role) {
             case "StudentOrg" ->
-                    matchingRequestRepository.existsByMatchingIdAndStudentOrgUsers(matchingId, userId);
+                    match.getStudentOrg().getUsers().stream()
+                            .anyMatch(u -> u.getUserId().equals(userId));
             case "Company" ->
-                    matchingRequestRepository.existsByMatchingIdAndCompanyUsers(matchingId, userId);
+                    match.getCompany().getUsers().stream()
+                            .anyMatch(u -> u.getUserId().equals(userId));
             case "Admin" -> true;
             default -> false;
         };

@@ -1,6 +1,6 @@
 package com.uniConnect.collaboration.entity;
 
-import com.uniConnect.campaign.entity.MatchingRequest;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import com.uniConnect.collaboration.enums.*;
@@ -24,9 +24,9 @@ public class Collaboration {
     @Column(name = "collaboration_id")
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "matching_id", unique = true)
-    private MatchingRequest matching;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "match_request_id")
+    private CollaborationMatchRequest matchRequest;
 
     @Enumerated(EnumType.STRING)
     @JdbcType(PostgreSQLEnumJdbcType.class)
@@ -64,7 +64,9 @@ public class Collaboration {
 
     @PrePersist
     public void prePersist() {
-        this.status = CollaborationStatus.FindingCompany;
+        if (this.status == null) {
+            this.status = CollaborationStatus.ContractSent;
+        }
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

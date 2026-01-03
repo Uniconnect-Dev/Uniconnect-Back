@@ -1,246 +1,253 @@
 package com.uniConnect.sampling.service;
 
-import com.uniConnect.sampling.dto.*;
-import com.uniConnect.sampling.repository.*;
-import com.uniConnect.sampling.entity.*;
-import com.uniConnect.studentOrg.entity.StudentOrg;
-import com.uniConnect.sampling.enums.SamplingStatus;
-import com.uniConnect.studentOrg.entity.StudentOrgAvailability;
-import com.uniConnect.matching.entity.CollaborationMatchRequest;
-import com.uniConnect.matching.repository.CollaborationMatchRequestRepository;
-import com.uniConnect.studentOrg.enums.CollaborationType;
+import com.uniConnect.campaign.entity.Campaign;
 import com.uniConnect.campaign.enums.MatchingStatus;
-import java.time.LocalDateTime;
+import com.uniConnect.campaign.repository.CampaignRepository;
+
+import com.uniConnect.company.entity.Company;
+import com.uniConnect.company.repository.CompanyRepository;
+import com.uniConnect.campaign.enums.CampaignStatus;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
+import com.uniConnect.matching.enums.MatchSender;
+import com.uniConnect.matching.repository.CollaborationMatchRequestRepository;
+
+import com.uniConnect.sampling.dto.*;
+import com.uniConnect.sampling.entity.SamplingProposal;
+import com.uniConnect.sampling.entity.SamplingTargetSelection;
+import com.uniConnect.sampling.enums.SamplingStatus;
+import com.uniConnect.sampling.repository.SamplingProposalRepository;
+
+import com.uniConnect.studentOrg.entity.Hashtag;
+import com.uniConnect.studentOrg.enums.CollaborationType;
 
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class SamplingMatchService {
 
-    private final StudentOrgQueryRepository studentOrgQueryRepository;
-    private final SamplingRequestRepository samplingRequestRepository;
-    private final SamplingTargetKeywordRepository targetKeywordRepository;
-    private final SamplingTargetSelectionRepository targetSelectionRepository;
-    private final SamplingMatchedOrgRepository matchedOrgRepository;
-    private final CollaborationMatchRequestRepository collaborationMatchRequestRepository;
+    private final CampaignRepository campaignRepository;
+    private final SamplingProposalRepository samplingProposalRepository;
+    private final CompanyRepository companyRepository;
+    private final CollaborationMatchRequestRepository matchRequestRepository;
 
-    /**
-     * 매칭된 학생단체 리스트 조회
-     */
+    /* =====================================================
+      3페이지: 매칭 가능한 학생단체 목록 조회
+    ===================================================== */
+    @Transactional(readOnly = true)
     public List<StudentOrgSummaryResponse> getMatchedStudentOrgs(
-            Long samplingRequestId,
+            Long samplingProposalId,
             String schoolName,
             Integer verificationLevel,
             int baseUnitCost,
             int reportOptionFee,
             int operationFee
     ) {
-        SamplingRequest request = samplingRequestRepository.findById(samplingRequestId)
-                .orElseThrow(() -> new RuntimeException("샘플링 요청을 찾을 수 없습니다."));
+        SamplingProposal proposal = samplingProposalRepository.findById(samplingProposalId)
+                .orElseThrow(() -> new IllegalArgumentException("샘플링 요청이 없습니다."));
 
-        int participants = request.getRequestedQuantity();
+        // 기업이 선택한 타깃 키워드 (label 기준)
+        List<String> keywordLabels = proposal.getSelections().stream()
+                .map(SamplingTargetSelection::getSelectedLabel)
+                .toList();
 
-        List<StudentOrg> orgs =
-                studentOrgQueryRepository.findMatchingStudentOrgs(
+        // 캠페인 기준으로 학생단체 후보 조회
+        List<Campaign> campaigns =
+                campaignRepository.findBySamplingTargetSelections(
+                        keywordLabels,
+                        proposal.getSamplingStartDate(),
+                        proposal.getSamplingEndDate(),
                         schoolName,
-                        verificationLevel
+                        verificationLevel,
+                        CollaborationType.Sampling,
+                        CampaignStatus.Submitted
                 );
 
-        return orgs.stream()
-                .map(org -> {
+        return campaigns.stream()
+                .map(campaign -> {
+                    int participants = campaign.getExpectedParticipants();
                     int cost = (participants * baseUnitCost)
                             + reportOptionFee
                             + operationFee;
 
-                    String range = String.format("%,d원 ~ %,d원", cost - 100_000, cost + 100_000);
-
                     return StudentOrgSummaryResponse.builder()
-                            .studentOrgId(org.getStudentOrgId())
-                            .organizationName(org.getOrganizationName())
-                            .schoolName(org.getSchoolName())
+                            .studentOrgId(campaign.getStudentOrg().getStudentOrgId())
+                            .organizationName(campaign.getStudentOrg().getOrganizationName())
+                            .schoolName(campaign.getStudentOrg().getSchoolName())
+                            .campaignName(campaign.getName())
+                            .matchedTags(
+                                    campaign.getCampaignTargets().stream()
+                                            .map(ct -> ct.getHashtag().getName())
+                                            .toList()
+                            )
                             .expectedParticipants(participants)
-                            .estimatedCostRange(range)
-                            .logoUrl(org.getLogoUrl())
+                            .estimatedCostRange(
+                                    String.format("%,d원 ~ %,d원",
+                                            cost - 100_000,
+                                            cost + 100_000)
+                            )
                             .build();
                 })
                 .toList();
     }
 
-
-    /**
-     * 단체 상세정보 조회
-     */
+    /* =====================================================
+      학생단체 상세 조회
+      → Campaign 기준
+    ===================================================== */
     @Transactional(readOnly = true)
     public StudentOrgDetailResponse getStudentOrgDetail(
-            Long samplingRequestId,
-            Long orgId,
+            Long samplingProposalId,
+            Long campaignId,
             int baseUnitCost,
             int reportOptionFee,
             int operationFee
     ) {
-        SamplingRequest request = samplingRequestRepository.findById(samplingRequestId)
-                .orElseThrow(() -> new RuntimeException("샘플링 요청을 찾을 수 없습니다."));
+        samplingProposalRepository.findById(samplingProposalId)
+                .orElseThrow(() -> new IllegalArgumentException("샘플링 요청이 없습니다."));
 
-        StudentOrg org = studentOrgQueryRepository.findById(orgId)
-                .orElseThrow(() -> new RuntimeException("학생단체를 찾을 수 없습니다."));
+        Campaign campaign = campaignRepository.findById(campaignId)
+                .orElseThrow(() -> new IllegalArgumentException("캠페인을 찾을 수 없습니다."));
 
-        int participants = request.getRequestedQuantity();
-
-        int cost = (participants * baseUnitCost)
-                + reportOptionFee
-                + operationFee;
-
-        String range = String.format("%,d원 ~ %,d원", cost - 100_000, cost + 100_000);
-
-        // availability 매핑
-        List<StudentOrgDetailResponse.AvailabilityInfo> availabilities =
-                org.getAvailabilities().stream()
-                        .map(a -> StudentOrgDetailResponse.AvailabilityInfo.builder()
-                                .eventName(a.getEventName())
-                                .startDate(a.getStartDate())
-                                .endDate(a.getEndDate())
-                                .description(a.getDescription())
-                                .build()
-                        )
-                        .toList();
-
-        return StudentOrgDetailResponse.builder()
-                .studentOrgId(org.getStudentOrgId())
-                .organizationName(org.getOrganizationName())
-                .schoolName(org.getSchoolName())
-                .managerName(org.getManagerName())
-                .phone(org.getPhone())
-                .email(org.getEmail())
-                .availabilities(availabilities)
-                .estimatedCostRange(range)
-                .build();
-    }
-
-
-    /**
-     * 선택한 학생단체 총 예상비용 계산
-     */
-    public EstimatedTotalCostResponse calculateTotalEstimatedCost(
-            Long samplingRequestId,
-            List<Long> selectedOrgIds,
-            int baseUnitCost,
-            int reportOptionFee,
-            int operationFee
-    ) {
-        SamplingRequest request = samplingRequestRepository.findById(samplingRequestId)
-                .orElseThrow(() -> new RuntimeException("샘플링 요청을 찾을 수 없습니다."));
-
-        int participants = request.getRequestedQuantity();
-
-        int unitCost = (participants * baseUnitCost)
-                + reportOptionFee
-                + operationFee;
-
-        int total = unitCost * selectedOrgIds.size();
-
-        return EstimatedTotalCostResponse.of(total);
-    }
-
-    /**
-     * 단체별 예상금액 계산
-     */
-    @Transactional(readOnly = true)
-    public OrgEstimatedCostResponse calculateSingleOrgEstimatedCost(
-            Long samplingRequestId,
-            Long orgId,
-            int baseUnitCost,
-            int reportOptionFee,
-            int operationFee
-    ) {
-        // 샘플링 요청 검증 (선택)
-        SamplingRequest request = samplingRequestRepository.findById(samplingRequestId)
-                .orElseThrow(() -> new IllegalArgumentException("샘플링 요청을 찾을 수 없습니다."));
-
-        // 단체 조회
-        StudentOrg org = studentOrgQueryRepository.findById(orgId)
-                .orElseThrow(() -> new IllegalArgumentException("학생단체를 찾을 수 없습니다."));
-
-        // 단체의 첫 번째 행사 데이터 사용 (대표 행사)
-        StudentOrgAvailability av = org.getAvailabilities().stream()
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("단체 행사 정보가 없습니다."));
-
-        int participants = (av.getRecommendedSampleQty() != null)
-                ? av.getRecommendedSampleQty()
-                : (av.getExposureCount() != null ? av.getExposureCount() : 100); // fallback
-
+        int participants = campaign.getExpectedParticipants();
         int cost = (participants * baseUnitCost) + reportOptionFee + operationFee;
 
-        return OrgEstimatedCostResponse.builder()
-                .studentOrgId(orgId)
-                .organizationName(org.getOrganizationName())
-                .participants(participants)
-                .minEstimated(cost - 100_000)
-                .maxEstimated(cost + 100_000)
-                .estimatedRange(String.format("%,d원 ~ %,d원", cost - 100_000, cost + 100_000))
+        return StudentOrgDetailResponse.builder()
+                .studentOrgId(campaign.getStudentOrg().getStudentOrgId())
+                .organizationName(campaign.getStudentOrg().getOrganizationName())
+                .schoolName(campaign.getStudentOrg().getSchoolName())
+                .managerName(campaign.getStudentOrg().getManagerName())
+                .phone(campaign.getStudentOrg().getPhone())
+                .email(campaign.getStudentOrg().getEmail())
+                .estimatedCostRange(
+                        String.format("%,d원 ~ %,d원",
+                                cost - 100_000,
+                                cost + 100_000)
+                )
                 .build();
     }
 
+    /* =====================================================
+      5페이지: 매칭 요청 제출 (기업 → 학생단체)
+      ※ proposal 단위 요청
+    ===================================================== */
+    public SamplingMatchSubmitResponse submitSamplingMatch(
+            Long userId,
+            SamplingMatchRequestDto dto
+    ) {
+        SamplingProposal proposal = samplingProposalRepository.findById(dto.samplingProposalId())
+                .orElseThrow(() -> new IllegalArgumentException("샘플링 요청이 없습니다."));
 
-
-    /**
-     * 매칭 요청 제출
-     */
-    @Transactional
-    public SamplingMatchSubmitResponse submitSamplingMatch(SamplingMatchRequestDto dto) {
-
-        SamplingRequest request = samplingRequestRepository.findById(dto.getSamplingRequestId())
-                .orElseThrow(() ->
-                        new IllegalArgumentException("해당 샘플링 요청을 찾을 수 없습니다.")
-                );
-
-        // 1) 타깃 키워드 저장
-        targetSelectionRepository.deleteAll(request.getSelections());
-        request.getSelections().clear();
-
-        List<SamplingTargetKeyword> keywords =
-                targetKeywordRepository.findAllById(dto.getSelectedKeywordIds());
-
-        for (SamplingTargetKeyword keyword : keywords) {
-            request.addSelection(SamplingTargetSelection.of(request, keyword));
+        if (!proposal.getCreator().getUserId().equals(userId)) {
+            throw new IllegalStateException("요청 권한이 없습니다.");
         }
 
-        // 2) 학생단체 선택 저장
-        matchedOrgRepository.deleteAll(request.getMatchedOrgs());
-        request.getMatchedOrgs().clear();
-
-        List<StudentOrg> selectedOrgs =
-                studentOrgQueryRepository.findAllById(dto.getSelectedOrgIds());
-
-        for (StudentOrg org : selectedOrgs) {
-            request.addMatchedOrg(SamplingMatchedOrg.of(request, org));
+        if (dto.campaignIds() == null || dto.campaignIds().isEmpty()) {
+            throw new IllegalArgumentException("선택된 캠페인이 없습니다.");
         }
 
-        for (StudentOrg org : selectedOrgs) {
+        matchRequestRepository
+                .deleteBySamplingProposal_ProposalId(proposal.getProposalId());
+
+        for (Long campaignId : dto.campaignIds()) {
+            Campaign campaign = campaignRepository.findById(campaignId)
+                    .orElseThrow(() -> new IllegalArgumentException("캠페인 없음"));
 
             CollaborationMatchRequest match = CollaborationMatchRequest.builder()
-                    .studentOrgId(org.getStudentOrgId())
-                    .companyId(request.getUser().getCompany().getCompanyId())
-                    .eventTitle(request.getEventTitle())
-                    .desiredDate(request.getEventStartDate())
-                    .industry(request.getIndustry())
-                    .collaborationType(CollaborationType.Sampling.name())
+                    .sender(MatchSender.COMPANY)
+                    .collaborationType(CollaborationType.Sampling)
+                    .samplingProposal(proposal)
+                    .campaign(campaign)
                     .status(MatchingStatus.Requested)
                     .requestedAt(LocalDateTime.now())
                     .build();
 
-            collaborationMatchRequestRepository.save(match);
+            matchRequestRepository.save(match);
         }
 
-        // 3) 상태 변경
-        request.setStatus(SamplingStatus.Submitted);
-        samplingRequestRepository.save(request);
+        proposal.setStatus(SamplingStatus.Submitted);
 
-        return SamplingMatchSubmitResponse.from(request);
+        return SamplingMatchSubmitResponse.of(dto.campaignIds().size());
+    }
+
+    /* =========================
+       총 예상 금액 계산
+    ========================= */
+    @Transactional(readOnly = true)
+    public EstimatedTotalCostResponse calculateTotalEstimatedCost(
+            Long samplingProposalId,
+            List<Long> studentOrgIds,
+            int baseUnitCost,
+            int reportOptionFee,
+            int operationFee
+    ) {
+        samplingProposalRepository.findById(samplingProposalId)
+                .orElseThrow(() -> new IllegalArgumentException("샘플링 요청이 없습니다."));
+
+        if (studentOrgIds == null || studentOrgIds.isEmpty()) {
+            throw new IllegalArgumentException("학생단체가 선택되지 않았습니다.");
+        }
+
+        int totalBaseCost = 0;
+
+        for (Long studentOrgId : studentOrgIds) {
+            Campaign campaign = campaignRepository
+                    .findTopByStudentOrg_StudentOrgIdAndCollaborationTypeOrderByCreatedAtDesc(
+                            studentOrgId,
+                            CollaborationType.Sampling
+                    )
+                    .orElseThrow(() -> new IllegalStateException("해당 학생단체의 캠페인이 없습니다."));
+
+            int participants = campaign.getExpectedParticipants();
+
+            totalBaseCost += (participants * baseUnitCost)
+                    + reportOptionFee
+                    + operationFee;
+        }
+
+        return EstimatedTotalCostResponse.of(totalBaseCost);
+    }
+
+    /* =========================
+       단체별 예상 금액 계산
+    ========================= */
+    @Transactional(readOnly = true)
+    public OrgEstimatedCostResponse calculateSingleOrgEstimatedCost(
+            Long samplingProposalId,
+            Long studentOrgId,
+            int baseUnitCost,
+            int reportOptionFee,
+            int operationFee
+    ) {
+        samplingProposalRepository.findById(samplingProposalId)
+                .orElseThrow(() -> new IllegalArgumentException("샘플링 요청이 없습니다."));
+
+        Campaign campaign = campaignRepository
+                .findTopByStudentOrg_StudentOrgIdAndCollaborationTypeOrderByCreatedAtDesc(
+                        studentOrgId,
+                        CollaborationType.Sampling
+                )
+                .orElseThrow(() -> new IllegalStateException("해당 학생단체의 캠페인이 없습니다."));
+
+        int participants = campaign.getExpectedParticipants();
+
+        int baseCost = (participants * baseUnitCost)
+                + reportOptionFee
+                + operationFee;
+
+        return OrgEstimatedCostResponse.of(
+                campaign.getStudentOrg().getStudentOrgId(),
+                campaign.getStudentOrg().getOrganizationName(),
+                participants,
+                baseUnitCost,
+                baseCost
+        );
     }
 }

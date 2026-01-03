@@ -1,6 +1,5 @@
 package com.uniConnect.collaboration.entity;
 
-import com.uniConnect.campaign.entity.MatchingRequest;
 import com.uniConnect.collaboration.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,6 +40,11 @@ public class CollaborationTask {
 
     @PreUpdate
     public void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PrePersist
+    public void prePersist() {
         this.updatedAt = LocalDateTime.now();
     }
 }

@@ -20,8 +20,12 @@ public class SamplingTargetSelection {
     private Long selectionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sampling_request_id", nullable = false)
+    @JoinColumn(name = "sampling_request_id")
     private SamplingRequest samplingRequest;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sampling_proposal_id")
+    private SamplingProposal samplingProposal;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "target_keyword_id", nullable = false)

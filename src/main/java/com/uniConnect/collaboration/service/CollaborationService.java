@@ -28,25 +28,19 @@ public class CollaborationService {
 
     public void markRecommendationReady(Long collabId) {
         Collaboration col = getCollaboration(collabId);
-        col.setStatus(CollaborationStatus.RecommendationReady);
-    }
-
-    // Step 2: 학생이 특정 기업에 매칭 요청하기
-    public void requestMatching(Long collabId, Long companyId) {
-        Collaboration col = getCollaboration(collabId);
-
-        if (col.getMatching() != null) {
-            col.getMatching().setSelectedCompanyId(companyId);
-        }
-
-        col.setStatus(CollaborationStatus.WaitingCompanyResponse);
+        col.setStatus(CollaborationStatus.ContractSent);
     }
 
     // Step 3: 기업이 승인 → 계약 발송
     public void sendContract(Long collabId, String contractUrl) {
         Collaboration col = getCollaboration(collabId);
+
+        if (col.getStatus() != CollaborationStatus.ContractSent) {
+            throw new IllegalStateException("계약 발송이 가능한 상태가 아닙니다.");
+        }
+
         col.setContractUrl(contractUrl);
-        col.setStatus(CollaborationStatus.ContractSent);
+        col.setStatus(CollaborationStatus.WaitingStudentSignature);
     }
 
     // Step 3: 학생 서명 완료
