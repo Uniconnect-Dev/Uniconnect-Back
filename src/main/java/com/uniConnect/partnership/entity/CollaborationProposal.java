@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
 @Table(name = "collaboration_proposals")
+//기업 req->학생
 public class CollaborationProposal {
 
     @Id

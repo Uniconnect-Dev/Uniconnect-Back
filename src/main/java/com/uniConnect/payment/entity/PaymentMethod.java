@@ -5,6 +5,8 @@ import com.uniConnect.payment.enums.PaymentMethodType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
@@ -18,7 +20,7 @@ public class PaymentMethod {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", length = 20)
-    private PaymentMethodType type;
+    private PaymentMethodType type; //항상 card
 
     @Column(name = "card_number_enc", length = 255)
     private String cardNumberEnc;
@@ -33,15 +35,26 @@ public class PaymentMethod {
     private String bankName;
 
     @Column(name = "account_no_enc", length = 255)
-    private String accountNoEnc;
+    private String accountNoEnc; //암호화x 계좌번호
 
     @Column(name = "holder_name", length = 50)
     private String holderName;
 
-    @Column(name = "is_default")
-    private Boolean isDefault;
+//    // 간편결제
+//    @Column(length = 100)
+//    private String pgProvider;  // kakaopay, naverpay, tosspay 등
+//
+//    @Column(length = 255)
+//    private String pgMerchantKey;  // PG사 merchant key
+
+//    // 상태
+//    @Column(nullable = false)
+//    private Boolean isDefault = false;  // 기본 결제 수단 여부: 미구현으로 제외
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
+
+    @OneToMany(mappedBy = "method")
+    private List<Payment> payments; //새로 추가
 }

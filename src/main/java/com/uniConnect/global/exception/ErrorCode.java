@@ -67,8 +67,18 @@ public enum ErrorCode {
     SIGNATURE_EXPIRED(HttpStatus.BAD_REQUEST, "서명 시간이 만료되었습니다."),
     INVALID_SIGNATURE(HttpStatus.BAD_REQUEST, "서명 검증에 실패했습니다."),
 
+    // payment 관련
+    INVALID_AMOUNT(HttpStatus.BAD_REQUEST, "금액이 일치하지 않습니다."),
+    PAYMENT_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 결제된 금액입니다."),
+    PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "결제에 실패했습니다."),
+    INVALID_PAYMENT_STATUS(HttpStatus.BAD_REQUEST, "취소 불가능한 결제상태입니다"),
+
     // 세금계산서 관련
-    INVALID_INVOICE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 세금계산서 발행 방식입니다.");
+    INVALID_INVOICE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 세금계산서 발행 방식입니다."),
+
+    // 암,복호화 관련
+    ENCRYPTION_FAILED(HttpStatus.BAD_REQUEST, "암호화에 실패하였습니다."),
+    DECRYPTION_FAILED(HttpStatus.BAD_REQUEST, "복호화에 실패하였습니다.");
 
 
     private final HttpStatus status;
