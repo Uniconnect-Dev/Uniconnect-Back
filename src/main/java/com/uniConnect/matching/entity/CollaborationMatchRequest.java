@@ -2,7 +2,6 @@ package com.uniConnect.matching.entity;
 
 import com.uniConnect.campaign.entity.Campaign;
 import com.uniConnect.campaign.enums.MatchingStatus;
-import com.uniConnect.sampling.enums.IndustryType;
 import com.uniConnect.matching.enums.MatchSender;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import com.uniConnect.studentOrg.enums.*;
