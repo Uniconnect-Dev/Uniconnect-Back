@@ -1,6 +1,8 @@
 package com.uniConnect.campaign.controller;
 
 import com.uniConnect.campaign.dto.CampaignCreateRequest;
+import com.uniConnect.campaign.dto.CampaignFirstPageResponse;
+import com.uniConnect.campaign.dto.CampaignFirstPageSaveRequest;
 import com.uniConnect.campaign.service.CampaignService;
 import com.uniConnect.global.response.ApiResponse;
 import com.uniConnect.member.security.local.CustomUser;
@@ -10,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequiredArgsConstructor
@@ -18,6 +21,44 @@ import org.springframework.web.multipart.MultipartFile;
 public class CampaignController {
 
     private final CampaignService campaignService;
+
+    /**
+     * 캠페인 생성 첫 페이지 조회
+     */
+    @GetMapping("/first-page")
+    @Operation(summary = "첫 페이지 기본 정보 조회")
+    public ResponseEntity<CampaignFirstPageResponse> getFirstPage(
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        if (user == null || user.getUserId() == null) {
+            throw new IllegalStateException("로그인이 필요합니다.");
+        }
+
+        return ResponseEntity.ok(
+                campaignService.getFirstPage(user.getUserId())
+        );
+    }
+
+    /**
+     * 캠페인 생성 첫 페이지 저장
+     */
+    @PostMapping("/first-page")
+    @Operation(summary = "첫 페이지 기본 정보 저장")
+    public ApiResponse<Long> saveFirstPage(
+            @AuthenticationPrincipal CustomUser user,
+            @RequestBody CampaignFirstPageSaveRequest request
+    ) {
+        if (user == null || user.getStudentOrgId() == null) {
+            throw new IllegalStateException("로그인이 필요합니다.");
+        }
+
+        Long campaignId = campaignService.saveFirstPage(
+                user.getStudentOrgId(),
+                request
+        );
+
+        return ApiResponse.success("캠페인 첫 페이지 저장 완료", campaignId);
+    }
 
 
     @PostMapping
