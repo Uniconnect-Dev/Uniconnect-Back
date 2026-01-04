@@ -15,12 +15,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/contracts")
 @RequiredArgsConstructor
-@Tag(name = "Contract API", description = "계약서 조회 및 서명 API (JWT loginId 인증 기반)")
+@Tag(name = "Contract API", description = "계약서 조회 및 서명 API")
 public class ContractController {
 
     private final ContractService contractService;
 
-    @Operation(summary = "내 계약 목록 조회 (JWT loginId 기반)")
+    @Operation(summary = "내 계약 목록 조회")
     @GetMapping
     public ResponseEntity<ApiResponse<List<ContractListItemDto>>> getMyContracts() {
         List<ContractListItemDto> contracts = contractService.getMyContracts();
