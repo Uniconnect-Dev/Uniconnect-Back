@@ -14,7 +14,7 @@ public class PaymentDto {
     @Data
     @Builder
     public static class PaymentListResponse {
-        private Long paymentId;
+        private Long paymentId; //private, get으로 r
         private Integer amount;
         private PaymentStatus status;
 

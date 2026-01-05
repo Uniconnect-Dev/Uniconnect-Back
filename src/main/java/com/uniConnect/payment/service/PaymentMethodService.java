@@ -3,13 +3,14 @@ package com.uniConnect.payment.service;
 import com.uniConnect.common.service.EncryptionService;
 import com.uniConnect.company.entity.Company;
 import com.uniConnect.company.repository.CompanyRepository;
+import com.uniConnect.studentOrg.entity.StudentOrg;
+import com.uniConnect.studentOrg.repository.StudentOrgRepository;
 import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.global.exception.ErrorCode;
 import com.uniConnect.payment.dto.*;
 import com.uniConnect.payment.entity.PaymentMethod;
 import com.uniConnect.payment.enums.PaymentMethodType;
 import com.uniConnect.payment.repository.*;
-import com.uniConnect.sampling.repository.SamplingRequestRepository;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,10 +27,11 @@ public class PaymentMethodService {
 
     private final PaymentMethodRepository paymentMethodRepository;
     private final CompanyRepository companyRepository;
+    private final StudentOrgRepository studentOrgRepository;
     private final EncryptionService encryptionService;
 
     /**
-     * 1. 결제 수단 등록 (카드 or 계좌)
+     * 1. 결제 수단 등록 (기업용) - 카드 or 계좌
      */
     public PaymentDto.PaymentMethodResponse registerPaymentMethod(
             Long companyId,
@@ -53,7 +55,7 @@ public class PaymentMethodService {
             method.setExpiry(request.getExpiry());
             method.setCvcEnc(encryptionService.encrypt(request.getCvc()));
 
-            log.info("[결제 수단 등록] Company ID: {}, Type: CARD", companyId);
+            log.info("기업 결제 수단 등록] Company ID: {}, Type: CARD", companyId);
 
         } else if (request.getType() == PaymentMethodType.Account) {
             validateAccountInfo(request);
@@ -62,7 +64,50 @@ public class PaymentMethodService {
             method.setAccountNoEnc(encryptionService.encrypt(request.getAccountNumber()));
             method.setHolderName(request.getAccountHolder());
 
-            log.info("[결제 수단 등록] Company ID: {}, Type: ACCOUNT, Bank: {}", companyId, request.getBankName());
+            log.info("기업 결제 수단 등록] Company ID: {}, Type: ACCOUNT, Bank: {}", companyId, request.getBankName());
+        }
+
+        // 4) DB에 저장
+        PaymentMethod savedMethod = paymentMethodRepository.save(method);
+
+        return convertToResponse(savedMethod);
+    }
+
+    /**
+     * 1-1. 결제 수단 등록 (학생단체용) - 카드 or 계좌
+     */
+    public PaymentDto.PaymentMethodResponse registerPaymentMethodForStudentOrg(
+            Long studentOrgId,
+            PaymentDto.PaymentMethodRequest request) {
+
+        // 1) 학생단체 정보 조회
+        StudentOrg studentOrg = studentOrgRepository.findById(studentOrgId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        // 2) PaymentMethod 생성
+        PaymentMethod method = PaymentMethod.builder()
+                .type(request.getType())
+                .studentOrg(studentOrg)
+                .build();
+
+        // 3) 타입별 정보 저장 (민감 정보 암호화)
+        if (request.getType() == PaymentMethodType.Card) {
+            validateCardInfo(request);
+
+            method.setCardNumberEnc(encryptionService.encrypt(request.getCardNumber()));
+            method.setExpiry(request.getExpiry());
+            method.setCvcEnc(encryptionService.encrypt(request.getCvc()));
+
+            log.info("[학생단체 결제 수단 등록] StudentOrg ID: {}, Type: CARD", studentOrgId);
+
+        } else if (request.getType() == PaymentMethodType.Account) {
+            validateAccountInfo(request);
+
+            method.setBankName(request.getBankName());
+            method.setAccountNoEnc(encryptionService.encrypt(request.getAccountNumber()));
+            method.setHolderName(request.getAccountHolder());
+
+            log.info("[학생단체 결제 수단 등록] StudentOrg ID: {}, Type: ACCOUNT, Bank: {}", studentOrgId, request.getBankName());
         }
 
         // 4) DB에 저장
@@ -80,7 +125,7 @@ public class PaymentMethodService {
         companyRepository.findById(companyId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-        log.info("[결제 수단 조회] Company ID: {}", companyId);
+        log.info("[기업 결제 수단 조회] Company ID: {}", companyId);
 
         return paymentMethodRepository.findByCompanyCompanyId(companyId)
                 .stream()
@@ -88,19 +133,25 @@ public class PaymentMethodService {
                 .collect(Collectors.toList());
     }
 
-//    /**
-//     * 3. 결제 수단 조회 (단일)
-//     */
-//    @Transactional(readOnly = true)
-//    public PaymentDto.PaymentMethodResponse getPaymentMethod(Long methodId, Long companyId) {
-//        PaymentMethod method = paymentMethodRepository.findByMethodIdAndCompanyCompanyId(methodId, companyId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-//
-//        return convertToResponse(method);
-//    }
+    /**
+     * 2-1. 결제 수단 조회 - 학생단체의 모든 결제 수단
+     */
+    @Transactional(readOnly = true)
+    public List<PaymentDto.PaymentMethodResponse> getPaymentMethodsByStudentOrg(Long studentOrgId) {
+        // 학생단체 존재 여부 확인
+        studentOrgRepository.findById(studentOrgId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        log.info("[학생단체 결제 수단 조회] StudentOrg ID: {}", studentOrgId);
+
+        return paymentMethodRepository.findByStudentOrgStudentOrgId(studentOrgId)
+                .stream()
+                .map(this::convertToResponse)
+                .collect(Collectors.toList());
+    }
 
     /**
-     * 4. 결제 수단 수정
+     * 3. 결제 수단 수정 (기업용)
      */
     public PaymentDto.PaymentMethodResponse updatePaymentMethod(
             Long methodId,
@@ -136,13 +187,55 @@ public class PaymentMethodService {
 
         PaymentMethod updatedMethod = paymentMethodRepository.save(method);
 
-        log.info("[결제 수단 수정] Method ID: {}, Company ID: {}", methodId, companyId);
+        log.info("[기업 결제 수단 수정] Method ID: {}, Company ID: {}", methodId, companyId);
 
         return convertToResponse(updatedMethod);
     }
 
     /**
-     * 5. 결제 수단 삭제
+     * 3-1. 결제 수단 수정 (학생단체용)
+     */
+    public PaymentDto.PaymentMethodResponse updatePaymentMethodForStudentOrg(
+            Long methodId,
+            Long studentOrgId,
+            PaymentDto.PaymentMethodRequest request) {
+
+        PaymentMethod method = paymentMethodRepository.findByMethodIdAndStudentOrgStudentOrgId(methodId, studentOrgId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        // 타입별 정보 업데이트
+        if (request.getType() == PaymentMethodType.Card) {
+            if (request.getCardNumber() != null && !request.getCardNumber().isEmpty()) {
+                method.setCardNumberEnc(encryptionService.encrypt(request.getCardNumber()));
+            }
+            if (request.getExpiry() != null && !request.getExpiry().isEmpty()) {
+                method.setExpiry(request.getExpiry());
+            }
+            if (request.getCvc() != null && !request.getCvc().isEmpty()) {
+                method.setCvcEnc(encryptionService.encrypt(request.getCvc()));
+            }
+
+        } else if (request.getType() == PaymentMethodType.Account) {
+            if (request.getBankName() != null && !request.getBankName().isEmpty()) {
+                method.setBankName(request.getBankName());
+            }
+            if (request.getAccountNumber() != null && !request.getAccountNumber().isEmpty()) {
+                method.setAccountNoEnc(encryptionService.encrypt(request.getAccountNumber()));
+            }
+            if (request.getAccountHolder() != null && !request.getAccountHolder().isEmpty()) {
+                method.setHolderName(request.getAccountHolder());
+            }
+        }
+
+        PaymentMethod updatedMethod = paymentMethodRepository.save(method);
+
+        log.info("[학생단체 결제 수단 수정] Method ID: {}, StudentOrg ID: {}", methodId, studentOrgId);
+
+        return convertToResponse(updatedMethod);
+    }
+
+    /**
+     * 4. 결제 수단 삭제 (기업용)
      */
     public void deletePaymentMethod(Long methodId, Long companyId) {
         PaymentMethod method = paymentMethodRepository.findByMethodIdAndCompanyCompanyId(methodId, companyId)
@@ -150,11 +243,23 @@ public class PaymentMethodService {
 
         paymentMethodRepository.delete(method);
 
-        log.info("[결제 수단 삭제] Method ID: {}, Company ID: {}", methodId, companyId);
+        log.info("[기업 결제 수단 삭제] Method ID: {}, Company ID: {}", methodId, companyId);
     }
 
     /**
-     * 6. DTO 변환 헬퍼 메서드
+     * 4-1. 결제 수단 삭제 (학생단체용)
+     */
+    public void deletePaymentMethodForStudentOrg(Long methodId, Long studentOrgId) {
+        PaymentMethod method = paymentMethodRepository.findByMethodIdAndStudentOrgStudentOrgId(methodId, studentOrgId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        paymentMethodRepository.delete(method);
+
+        log.info("[학생단체 결제 수단 삭제] Method ID: {}, StudentOrg ID: {}", methodId, studentOrgId);
+    }
+
+    /**
+     * 5. DTO 변환 헬퍼 메서드
      */
     private PaymentDto.PaymentMethodResponse convertToResponse(PaymentMethod method) {
         String displayInfo = "";
@@ -191,7 +296,7 @@ public class PaymentMethodService {
     }
 
     /**
-     * 7. 카드 정보 검증
+     * 6. 카드 정보 검증
      */
     private void validateCardInfo(PaymentDto.PaymentMethodRequest request) {
         if (request.getCardNumber() == null || request.getCardNumber().isEmpty()) {
@@ -206,7 +311,7 @@ public class PaymentMethodService {
     }
 
     /**
-     * 8. 계좌 정보 검증
+     * 7. 계좌 정보 검증
      */
     private void validateAccountInfo(PaymentDto.PaymentMethodRequest request) {
         if (request.getBankName() == null || request.getBankName().isEmpty()) {

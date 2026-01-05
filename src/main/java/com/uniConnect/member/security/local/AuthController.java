@@ -4,11 +4,9 @@ import com.uniConnect.member.security.local.dto.*;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.graphql.GraphQlProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,7 +17,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<LocalLoginResp> login(@RequestBody LocalLoginReq request) {
+    public ResponseEntity<AuthDto.LocalLoginResp> login(@RequestBody AuthDto.LocalLoginReq request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
@@ -34,7 +32,7 @@ public class AuthController {
      * JWT 기반 로그아웃
      */
     @PostMapping("/logout")
-    public ResponseEntity<LocalLogoutResp> logout(
+    public ResponseEntity<AuthDto.LocalLogoutResp> logout(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             HttpServletResponse response,
             @AuthenticationPrincipal CustomUser user
@@ -52,7 +50,7 @@ public class AuthController {
         }
 
         // 3. 서비스 호출 (블랙리스트 등록 등)
-        LocalLogoutResp resp = authService.logout(accessToken);
+        AuthDto.LocalLogoutResp resp = authService.logout(accessToken);
 
         // 4. 쿠키 삭제 (만약 쿠키로도 토큰을 주고받았다면)
         addExpiredCookie(response, "ACCESS_TOKEN");

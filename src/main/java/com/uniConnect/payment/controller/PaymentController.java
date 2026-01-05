@@ -49,7 +49,7 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.getPaymentsByStudentOrg(studentOrgId));
     }
 
-    // ===== 2. 결제 수단 관리 (Company) =====
+    // ===== 2. 결제 수단 관리 =====
 
     /**
      * 기업 결제 수단 등록
@@ -188,21 +188,20 @@ public class PaymentController {
                 .body(invoiceService.createInvoice(companyId, request));
     }
 
-    /**
-     * 기업 세금계산서/영수증 다운로드
-     */
-    @GetMapping("/companies/{companyId}/invoices/{invoiceId}/download")
-    @Operation(summary = "기업 세금계산서/영수증 다운로드")
-    public ResponseEntity<Resource> downloadInvoiceForCompany(
-            @Parameter(description = "기업 ID", example = "1")
-            @PathVariable Long companyId,
-            @Parameter(description = "영수증 ID", example = "1")
-            @PathVariable Long invoiceId) {
-        return invoiceService.downloadInvoicePdf(invoiceId, companyId);
-    }
+//    /**
+//     * 기업 세금계산서/영수증 다운로드
+//     */
+//    @GetMapping("/companies/{companyId}/invoices/{invoiceId}/download")
+//    @Operation(summary = "기업 세금계산서/영수증 다운로드")
+//    public ResponseEntity<Resource> downloadInvoiceForCompany(
+//            @Parameter(description = "기업 ID", example = "1")
+//            @PathVariable Long companyId,
+//            @Parameter(description = "영수증 ID", example = "1")
+//            @PathVariable Long invoiceId) {
+//        return invoiceService.downloadInvoicePdf(invoiceId, companyId);
+//    }
 
-    // ===== 6. 환불 처리 (Company) =====
-
+    // ===== 6. 환불 처리 =====
     /**
      * 기업 환불 요청
      */
