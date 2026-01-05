@@ -4,8 +4,8 @@ import com.uniConnect.invoice.entity.InvoiceStatus;
 import com.uniConnect.invoice.entity.InvoiceType;
 import com.uniConnect.payment.enums.*;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -17,11 +17,59 @@ public class PaymentDto {
         private Long paymentId;
         private Integer amount;
         private PaymentStatus status;
+
+        // PG사 거래 정보
+        private String transactionId;
+        private String receiptUrl;
+
+        // 타임스탬프
         private LocalDateTime createdAt;
-        private String campaignName;  // 캠페인 명
-        private Integer campaignAmount;  // 비용
+        private LocalDateTime completedAt;
+        private LocalDateTime canceledAt;
+
+        // 캠페인 정보
+        private String campaignName;
+        private Integer campaignAmount;
+
+        // 결제 수단 정보
         private String paymentMethodType;  // 카드/계좌 등
-//        private String receiptUrl;  // 영수증 URL
+    }
+
+    /**
+     * 결제 상세 조회 Response DTO (선택적)
+     * 관리자가 결제 상세 정보를 조회할 때 사용
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PaymentDetailResponse {
+        private Long paymentId;
+        private Integer amount;
+        private PaymentStatus status;
+
+        // PG사 거래 정보
+        private String transactionId;
+        private String receiptUrl;
+
+        // 타임스탬프
+        private LocalDateTime createdAt;
+        private LocalDateTime completedAt;
+        private LocalDateTime canceledAt;
+
+        // 캠페인 정보
+        private Long campaignId;
+        private String campaignName;
+        private Integer campaignAmount;
+
+        // 기업 정보
+        private Long companyId;
+        private String companyName;
+
+        // 결제 수단 정보
+        private Long paymentMethodId;
+        private String paymentMethodType;
+        private String paymentMethodDisplayInfo;
     }
 
     @Data
@@ -109,13 +157,16 @@ public class PaymentDto {
         private String representativeName;
     }
 
+    //user가 생성
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class RefundRequest {
+    public static class RefundRequestRequest {
         private Long paymentId;          // 어떤 결제에 대한 환불인지
 
         private String reason;            // 환불 사유
+
+        @Min(value = 1, message = "환불 금액은 1 이상이어야 합니다")
         private Integer refundAmount;     // 환불 금액
 
         // 환불 계좌 정보
@@ -127,17 +178,31 @@ public class PaymentDto {
         private String requesterName;
         private String requesterEmail;
         private String requesterPhone;
+
+        //환불 신청일
+        private LocalDateTime requestedAt;
+    }
+
+    //admin이 이미 생성한 환불req 거절
+    @Data
+    @Builder
+    public static class RefundRejectRequest {
+        private String rejectionReason;            // 환불 사유
     }
 
     @Data
     @Builder
     public static class RefundResponse {
         private Long refundId;
-
         private Long paymentId;
-
-        private String reason;
         private Integer refundAmount;
+
+        // 환불 상태
+        private RefundStatus refundStatus;  // PENDING, PROCESSING, COMPLETED, REJECTED
+
+        // 사유
+        private String reason;
+        private String refundRejectionReason;
 
         // 환불 계좌 정보 (마스킹된 값 권장)
         private String bankName;
@@ -149,25 +214,13 @@ public class PaymentDto {
         private String requesterEmail;
         private String requesterPhone;
 
+        // timestamp
         private LocalDateTime requestedAt;
-    }
+        private LocalDateTime completedAt;
+        private LocalDateTime rejectedAt;
 
-    //기업 마이페이지용
-    @Data
-    @Builder
-    public static class ListResponse {
-
-        private Long refundId;
-
-        private Long paymentId;
-
-        private Integer refundAmount;
-        private String bankName;
-        private String holderName;
-
-        private String requesterName;
-
-        private LocalDateTime requestedAt;
+        // 환불 거래 ID
+        private String refundTransactionId;
     }
 
 }

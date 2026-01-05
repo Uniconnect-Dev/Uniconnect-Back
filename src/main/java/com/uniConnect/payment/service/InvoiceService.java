@@ -1,7 +1,9 @@
 package com.uniConnect.payment.service;
 
+import com.uniConnect.common.service.EmailService;
 import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.global.exception.ErrorCode;
+import com.uniConnect.invoice.entity.InvoiceStatus;
 import com.uniConnect.member.entity.BusinessRegistration;
 import com.uniConnect.member.repository.BusinessRegistrationRepository;
 import com.uniConnect.payment.dto.*;
@@ -46,7 +48,7 @@ public class InvoiceService {
                 .payment(payment)
                 .company(payment.getCompany())
                 .businessRegistration(businessReg)
-                .samplingRequest(payment.getSamplingRequest())
+                .samplingRequest(payment.getCampaign())
                 .amount(request.getAmount())
                 .taxAmount(request.getTaxAmount())
                 .status(InvoiceStatus.PENDING)

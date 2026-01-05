@@ -7,13 +7,14 @@ import com.uniConnect.payment.dto.*;
 import com.uniConnect.payment.entity.DummyPgGatewayAdapter;
 import com.uniConnect.payment.entity.Payment;
 import com.uniConnect.payment.entity.PaymentMethod;
-import com.uniConnect.payment.entity.PgGatewayAdapter;
 import com.uniConnect.payment.enums.PaymentStatus;
 import com.uniConnect.payment.repository.*;
 import com.uniConnect.campaign.repository.CampaignRepository;
 import com.uniConnect.campaign.entity.Campaign;
 import com.uniConnect.company.repository.CompanyRepository;
 import com.uniConnect.company.entity.Company;
+import com.uniConnect.studentOrg.entity.StudentOrg;
+import com.uniConnect.studentOrg.repository.StudentOrgRepository;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class PaymentService {
     private final PaymentMethodRepository paymentMethodRepository;
     private final CampaignRepository campaignRepository;
     private final CompanyRepository companyRepository;
+    private final StudentOrgRepository studentOrgRepository;
     private final DummyPgGatewayAdapter pgGatewayAdapter;
     private final PaymentNotificationServiceImpl notificationService;
 
@@ -40,7 +42,7 @@ public class PaymentService {
      * 1. 기업의 모든 결제 내역 조회
      */
     @Transactional(readOnly = true)
-    public List<PaymentDto.PaymentListResponse> getPaymentsByCompany(Long companyId) {
+    public List<PaymentDto.PaymentListResponse> getPayments(Long companyId) {
         // 회사 존재 여부 확인
         companyRepository.findById(companyId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
@@ -53,54 +55,56 @@ public class PaymentService {
                 .collect(Collectors.toList());
     }
 
-//    /**
-//     * 2. 캠페인별 결제 내역 조회
-//     */
-//    @Transactional(readOnly = true)
-//    public List<PaymentDto.PaymentListResponse> getPaymentsByCampaign(Long campaignId) {
-//        // 캠페인 존재 여부 확인
-//        campaignRepository.findById(campaignId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-//
-//        log.info("[캠페인별 결제 조회] Campaign ID: {}", campaignId);
-//
-//        return paymentRepository.findByCampaignCampaignIdOrderByCreatedAtDesc(campaignId)
-//                .stream()
-//                .map(this::convertToPaymentListResponse)
-//                .collect(Collectors.toList());
-//    }
+    /**
+     * 1-2. 학생단체별 결제 내역 조회
+     */
+    @Transactional(readOnly = true)
+    public List<PaymentDto.PaymentListResponse> getPaymentsByStudentOrg(Long studentOrgId) {
+        studentOrgRepository.findById(studentOrgId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-//    /**
-//     * 3. 단일 결제 내역 조회
-//     */
-//    @Transactional(readOnly = true)
-//    public PaymentDto.PaymentListResponse getPaymentDetails(Long paymentId, Long companyId) {
-//        Payment payment = paymentRepository.findById(paymentId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-//
-//        // 권한 확인
-//        if (!payment.getCompany().getCompanyId().equals(companyId)) {
-//            throw new CustomException(ErrorCode.UNAUTHORIZED);
-//        }
-//
-//        return convertToPaymentListResponse(payment);
-//    }
+        return paymentRepository.findByStudentOrgStudentOrgIdOrderByCreatedAtDesc(studentOrgId)
+                .stream()
+                .map(this::convertToPaymentListResponse)
+                .collect(Collectors.toList());
+    }
 
     /**
-     * 4. 결제 진행 (캠페인 결제)
+     * 2. 결제 진행 (캠페인 결제)
      */
+    //바뀌는 로직부분만 분리
     public PaymentDto.PaymentListResponse createPayment(Long companyId, PaymentDto.PaymentCreateRequest request) {
         // 1) 회사 정보 조회
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
+        return processPayment(company, null, request);
+    }
+
+    public PaymentDto.PaymentListResponse createPaymentByStudentOrg(Long studentOrgId, PaymentDto.PaymentCreateRequest request) {
+        StudentOrg studentOrg = studentOrgRepository.findById(studentOrgId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        return processPayment(null, studentOrg, request);
+    }
+
+    //null값으로 method overload
+    private PaymentDto.PaymentListResponse processPayment(Company company, StudentOrg studentOrg, PaymentDto.PaymentCreateRequest request) {
         // 2) 캠페인 정보 조회
         Campaign campaign = campaignRepository.findById(request.getCampaignId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-        // 3) 회사 권한 확인
-        if (!campaign.getCompany().getCompanyId().equals(companyId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        // 3) 회사 or 학생단체 권한 확인
+        if (company != null) {
+            if (!campaign.getCompany().getCompanyId().equals(company.getCompanyId())) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+            log.info("[결제 진행] Company ID: {}", company.getCompanyId());
+        } else {
+            if (!campaign.getStudentOrg().getStudentOrgId().equals(studentOrg.getStudentOrgId())) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+            log.info("[결제 진행] StudentOrg ID: {}", studentOrg.getStudentOrgId());
         }
 
         // 4) 결제 수단 조회
@@ -108,7 +112,10 @@ public class PaymentService {
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
         // 5) 결제 수단 소유 권한 확인
-        if (!method.getCompany().getCompanyId().equals(companyId)) {
+        if (company != null && !method.getCompany().getCompanyId().equals(company.getCompanyId())) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+        if (studentOrg != null && !method.getStudentOrg().getStudentOrgId().equals(studentOrg.getStudentOrgId())) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
@@ -117,15 +124,10 @@ public class PaymentService {
             throw new CustomException(ErrorCode.INVALID_AMOUNT);
         }
 
-//        // 7) 이미 결제되었는지 확인
-//        paymentRepository.findSuccessfulPaymentByCampaign(campaign.getCampaignId())
-//                .ifPresent(p -> {
-//                    throw new CustomException(ErrorCode.PAYMENT_ALREADY_PROCESSED);
-//                });
-
-        // 8) Payment 엔티티 생성
+        // 7) Payment 엔티티 생성
         Payment payment = Payment.builder()
                 .company(company)
+                .studentOrg(studentOrg)
                 .campaign(campaign)
                 .amount(request.getAmount())
                 .method(method)
@@ -134,27 +136,27 @@ public class PaymentService {
 
         paymentRepository.save(payment);
 
-        log.info("[결제 시작] Payment ID: {}, Company ID: {}, Campaign ID: {}, Amount: {}",
-                payment.getPaymentId(), companyId, campaign.getCampaignId(), request.getAmount());
+        log.info("[결제 시작] Payment ID: {}, Campaign ID: {}, Amount: {}",
+                payment.getPaymentId(), campaign.getCampaignId(), request.getAmount());
 
         try {
-            // 9) PG사에 결제 요청
+            // 8) PG사에 결제 요청
             String transactionId = pgGatewayAdapter.processPayment(
                     payment.getPaymentId(),
                     request.getAmount(),
                     method
             );
 
-            // 10) 결제 성공 업데이트
+            // 9) 결제 성공 업데이트
             payment.setStatus(PaymentStatus.SUCCESS);
-//            payment.setTransactionId(transactionId);
+            payment.setTransactionId(transactionId);
+            payment.setCompletedAt(LocalDateTime.now());
             paymentRepository.save(payment);
 
             log.info("[결제 성공] Payment ID: {}, TransactionId: {}", payment.getPaymentId(), transactionId);
 
-            // 11) 알림 발송
+            // 10) 알림 발송
             notificationService.notifyPaymentSuccess(payment);
-
             return convertToPaymentListResponse(payment);
 
         } catch (Exception e) {
@@ -176,23 +178,40 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-        // 권한 확인
         if (!payment.getCompany().getCompanyId().equals(companyId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        // PROCESSING 상태에서만 취소 가능
+        performCancelPayment(payment);
+    }
+
+    public void cancelPaymentByStudentOrg(Long paymentId, Long studentOrgId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        if (!payment.getStudentOrg().getStudentOrgId().equals(studentOrgId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        performCancelPayment(payment);
+    }
+
+    /**
+     * 공통 결제 취소 로직
+     */
+    private void performCancelPayment(Payment payment) {
         if (payment.getStatus() != PaymentStatus.PROCESSING) {
             throw new CustomException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
 
         payment.setStatus(PaymentStatus.CANCELED);
+        payment.setCanceledAt(LocalDateTime.now());
         paymentRepository.save(payment);
 
-        log.info("[결제 취소] Payment ID: {}, Company ID: {}", paymentId, companyId);
-
+        log.info("[결제 취소] Payment ID: {}", payment.getPaymentId());
         notificationService.notifyPaymentFailed(payment);
     }
+
 
     /**
      * 6. 결제 재시도 (FAILED 상태에서만 가능)
@@ -201,12 +220,28 @@ public class PaymentService {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-        // 권한 확인
         if (!payment.getCompany().getCompanyId().equals(companyId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        // FAILED 상태에서만 재시도 가능
+        return performRetryPayment(payment);
+    }
+
+    public PaymentDto.PaymentListResponse retryPaymentByStudentOrg(Long paymentId, Long studentOrgId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        if (!payment.getStudentOrg().getStudentOrgId().equals(studentOrgId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        return performRetryPayment(payment);
+    }
+
+    /**
+     * 공통 결제 재시도 로직
+     */
+    private PaymentDto.PaymentListResponse performRetryPayment(Payment payment) {
         if (payment.getStatus() != PaymentStatus.FAILED) {
             throw new CustomException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
@@ -214,23 +249,21 @@ public class PaymentService {
         payment.setStatus(PaymentStatus.PROCESSING);
         paymentRepository.save(payment);
 
-        log.info("[결제 재시도] Payment ID: {}, Company ID: {}", paymentId, companyId);
+        log.info("[결제 재시도] Payment ID: {}", payment.getPaymentId());
 
         try {
-            // PG사에 결제 재요청
             String transactionId = pgGatewayAdapter.processPayment(
                     payment.getPaymentId(),
                     payment.getAmount(),
                     payment.getMethod()
             );
 
-            // 결제 성공 업데이트
             payment.setStatus(PaymentStatus.SUCCESS);
-//            payment.setTransactionId(transactionId);
+            payment.setTransactionId(transactionId);
+            payment.setCompletedAt(LocalDateTime.now());
             paymentRepository.save(payment);
 
-            log.info("[결제 재시도 성공] Payment ID: {}, TransactionId: {}", paymentId, transactionId);
-
+            log.info("[결제 재시도 성공] Payment ID: {}, TransactionId: {}", payment.getPaymentId(), transactionId);
             notificationService.notifyPaymentSuccess(payment);
 
             return convertToPaymentListResponse(payment);
@@ -238,50 +271,13 @@ public class PaymentService {
         } catch (Exception e) {
             payment.setStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
-
-            log.error("[결제 재시도 실패] Payment ID: {}, Error: {}", paymentId, e.getMessage(), e);
-
+            log.error("[결제 재시도 실패] Payment ID: {}, Error: {}", payment.getPaymentId(), e.getMessage(), e);
             throw new CustomException(ErrorCode.PAYMENT_FAILED);
         }
     }
 
-//    /**
-//     * 7. 결제 현황 통계 (기업별)
-//     */
-//    @Transactional(readOnly = true)
-//    public PaymentDto.PaymentStatisticsResponse getPaymentStatistics(Long companyId) {
-//        companyRepository.findById(companyId)
-//                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-//
-//        Optional<Payment> allPayments = paymentRepository.findByCompanyCompanyIdOrderByCreatedAtDesc(companyId);
-//
-//        long totalAmount = allPayments.stream()
-//                .filter(p -> p.getStatus() == PaymentStatus.SUCCESS)
-//                .mapToLong(Payment::getAmount)
-//                .sum();
-//
-//        long successCount = allPayments.stream()
-//                .filter(p -> p.getStatus() == PaymentStatus.SUCCESS)
-//                .count();
-//
-//        long failedCount = allPayments.stream()
-//                .filter(p -> p.getStatus() == PaymentStatus.FAILED)
-//                .count();
-//
-//        log.info("[결제 통계] Company ID: {}, Total: {}, Success: {}, Failed: {}",
-//                companyId, totalAmount, successCount, failedCount);
-//
-//        return PaymentDto.PaymentStatisticsResponse.builder()
-//                .totalAmount(totalAmount)
-//                .successCount(successCount)
-//                .failedCount(failedCount)
-//                .cancelledCount(allPayments.stream().filter(p -> p.getStatus() == PaymentStatus.CANCELLED).count())
-//                .processingCount(allPayments.stream().filter(p -> p.getStatus() == PaymentStatus.PROCESSING).count())
-//                .build();
-//    }
-
     /**
-     * 8. DTO 변환 헬퍼 메서드
+     * 7. DTO 변환 헬퍼 메서드
      */
     private PaymentDto.PaymentListResponse convertToPaymentListResponse(Payment payment) {
         String campaignName = payment.getCampaign() != null ? payment.getCampaign().getName() : "N/A";
@@ -291,11 +287,15 @@ public class PaymentService {
                 .paymentId(payment.getPaymentId())
                 .amount(payment.getAmount())
                 .status(payment.getStatus())
+                .transactionId(payment.getTransactionId())  // ← 추가
+                .receiptUrl(payment.getReceiptUrl())  // ← 추가
+                .createdAt(payment.getCreatedAt())
+                .completedAt(payment.getCompletedAt())  // ← 추가
+                .canceledAt(payment.getCanceledAt())  // ← 추가
                 .createdAt(payment.getCreatedAt())
                 .campaignName(campaignName)
                 .campaignAmount(payment.getAmount())
                 .paymentMethodType(methodType)
-//                .receiptUrl(payment.getReceiptUrl())
                 .build();
     }
 }

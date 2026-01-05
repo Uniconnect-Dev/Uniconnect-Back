@@ -46,18 +46,20 @@ public class RefundRequest {
     @Column(name = "requested_at")
     private LocalDateTime requestedAt;  // 환불 시작 일시
 
-//    // 상태 관리(새로 추가)
-//    @Enumerated(EnumType.STRING)
-//    @Column(nullable = false)
-//    private RefundStatus refundStatus;  // PENDING, PROCESSING, COMPLETED, REJECTED
-//
-//    @Column(columnDefinition = "text")
-//    private String refundRejectionReason;  // 거절 사유 (거절 시)
-//
-//    private LocalDateTime completedAt;  // 환불 완료 일시
-//
-//    @Column(length = 100)
-//    private String refundTransactionId;  // 환불 거래 ID
+    // 새로 추가
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private RefundStatus refundStatus;  // PENDING, PROCESSING, COMPLETED, REJECTED
+
+    @Column(columnDefinition = "text")
+    private String refundRejectionReason;  // 거절 사유 (거절 시)
+
+    private LocalDateTime completedAt;  // 환불 완료 일시
+
+    @Column(length = 100)
+    private String refundTransactionId;  // 환불 거래 ID
+
+    private LocalDateTime rejectedAt;  // 환불 거절 일시
 
 
     @ManyToOne(fetch = FetchType.LAZY)

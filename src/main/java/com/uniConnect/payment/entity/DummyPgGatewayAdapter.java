@@ -67,6 +67,41 @@ public class DummyPgGatewayAdapter implements PgGatewayAdapter {
         return "SUCCESS";
     }
 
+
+    /**
+     * 더미 환불 처리
+     * - 실제 환불은 하지 않고, 임의의 환불 거래 ID를 생성하여 반환합니다.
+     */
+    @Override
+    public String processRefund(String transactionId, Integer refundAmount) throws Exception {
+        log.info("[더미 환불 처리] Transaction ID: {}, Refund Amount: {}", transactionId, refundAmount);
+
+        // 입력 검증
+        if (transactionId == null || transactionId.isEmpty()) {
+            log.warn("[환불 처리 실패] 유효하지 않은 거래 ID: {}", transactionId);
+            throw new Exception("Invalid transaction ID");
+        }
+
+        if (refundAmount == null || refundAmount <= 0) {
+            log.warn("[환불 처리 실패] 유효하지 않은 환불 금액: {}", refundAmount);
+            throw new Exception("Invalid refund amount");
+        }
+
+        // 시뮬레이션: 8% 확률로 환불 실패
+        if (Math.random() < 0.08) {
+            log.error("[더미 환불 처리 실패] 시뮬레이션된 환불 실패");
+            throw new Exception("Simulated refund failure");
+        }
+
+        // 환불 거래 ID 생성
+        String refundTransactionId = generateRefundTransactionId();
+
+        log.info("[더미 환불 처리 성공] Original Transaction ID: {}, Refund Amount: {}, Refund Transaction ID: {}",
+                transactionId, refundAmount, refundTransactionId);
+
+        return refundTransactionId;
+    }
+
     /**
      * 결제 수단 검증
      */
@@ -97,6 +132,13 @@ public class DummyPgGatewayAdapter implements PgGatewayAdapter {
      * 거래 ID 생성
      */
     private String generateTransactionId() {
+        return "TXN_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
+    }
+
+    /**
+     * 거래 ID 생성
+     */
+    private String generateRefundTransactionId() {
         return "TXN_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
     }
 }

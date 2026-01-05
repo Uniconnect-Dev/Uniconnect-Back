@@ -31,4 +31,13 @@ public interface PgGatewayAdapter {
      * @throws Exception 조회 실패 시 예외 발생
      */
     String getTransactionStatus(String transactionId) throws Exception;
+
+    /**
+     * 환불 처리
+     * @param transactionId 원본 거래 ID (환불할 결제의 거래 ID)
+     * @param refundAmount 환불 금액
+     * @return 환불 거래 ID
+     * @throws Exception 환불 처리 실패 시 예외 발생
+     */
+    String processRefund(String transactionId, Integer refundAmount) throws Exception;
 }

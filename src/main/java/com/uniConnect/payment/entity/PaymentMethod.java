@@ -2,6 +2,7 @@ package com.uniConnect.payment.entity;
 
 import com.uniConnect.company.entity.Company;
 import com.uniConnect.payment.enums.PaymentMethodType;
+import com.uniConnect.studentOrg.entity.StudentOrg;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -54,6 +55,11 @@ public class PaymentMethod {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
+
+    //추가
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_org_id")
+    private StudentOrg studentOrg;
 
     @OneToMany(mappedBy = "method")
     private List<Payment> payments; //새로 추가

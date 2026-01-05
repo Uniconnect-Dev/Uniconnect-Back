@@ -4,6 +4,7 @@ import com.uniConnect.campaign.entity.Campaign;
 import com.uniConnect.company.entity.Company;
 import com.uniConnect.payment.enums.PaymentStatus;
 import com.uniConnect.sampling.entity.SamplingRequest;
+import com.uniConnect.studentOrg.entity.StudentOrg;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -28,17 +29,27 @@ public class Payment {
     @Column(name = "status", length = 20)
     private PaymentStatus status;
 
-//    private String transactionId; //결제 gateway
-//    private String receiptUrl;
-
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    // 결제 완료 시간
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    // 결제 취소 시간
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
 
     // relations
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id")
     private Company company;
+
+    //추가
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "student_org_id")
+    private StudentOrg studentOrg;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campaign_id")
@@ -48,10 +59,14 @@ public class Payment {
     @JoinColumn(name = "method_id")
     private PaymentMethod method;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "sampling_request_id")
-//    private SamplingRequest samplingRequest;  // 샘플링별 결제
-//
+    // PG사 거래 ID (PG Gateway에서 발급)
+    @Column(name = "transaction_id", length = 100)
+    private String transactionId;
+
+    // 영수증 URL
+    @Column(name = "receipt_url", columnDefinition = "text")
+    private String receiptUrl;
+
 //
 //    @OneToMany(mappedBy= "payment")
 //    private List<Invoice> invoices;

@@ -75,6 +75,10 @@ public enum ErrorCode {
 
     // 세금계산서 관련
     INVALID_INVOICE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 세금계산서 발행 방식입니다."),
+    BUSINESS_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "사업자 검증에 실패하였습니다"),
+
+    // 환불 관련
+    REFUND_FAILED(HttpStatus.BAD_REQUEST, "PG사 환불 처리에 실패하였습니다"),
 
     // 암,복호화 관련
     ENCRYPTION_FAILED(HttpStatus.BAD_REQUEST, "암호화에 실패하였습니다."),
