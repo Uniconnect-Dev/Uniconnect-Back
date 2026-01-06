@@ -27,9 +27,9 @@ public class PaymentDto {
         private LocalDateTime completedAt;
         private LocalDateTime canceledAt;
 
-        // 캠페인 정보
-        private String campaignName;
-        private Integer campaignAmount;
+        // matchReq 정보
+        private Long matchRequestId;
+        private String matchRequestType;
 
         // 결제 수단 정보
         private String paymentMethodType;  // 카드/계좌 등
@@ -77,9 +77,9 @@ public class PaymentDto {
     @AllArgsConstructor
     public static class PaymentCreateRequest {
         @NotNull
-        private Long campaignId;  // 샘플링 요청 ID
+        private Long collaborationMatchRequestId;  // 샘플링,협업 요청 ID
 
-        @NotNull
+        @NotNull @Positive
         private Integer amount;  // 결제 금액
 
         @NotNull

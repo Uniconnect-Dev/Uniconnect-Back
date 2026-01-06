@@ -2,6 +2,7 @@ package com.uniConnect.payment.entity;
 
 import com.uniConnect.campaign.entity.Campaign;
 import com.uniConnect.company.entity.Company;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import com.uniConnect.payment.enums.PaymentStatus;
 import com.uniConnect.sampling.entity.SamplingRequest;
 import com.uniConnect.studentOrg.entity.StudentOrg;
@@ -51,9 +52,14 @@ public class Payment {
     @JoinColumn(name = "student_org_id")
     private StudentOrg studentOrg;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "campaign_id")
-    private Campaign campaign;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "campaign_id")
+//    private Campaign campaign;
+
+    //추가
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "collaboration_match_request_id")
+    private CollaborationMatchRequest collaborationMatchRequest;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "method_id")
@@ -67,10 +73,6 @@ public class Payment {
     @Column(name = "receipt_url", columnDefinition = "text")
     private String receiptUrl;
 
-//
-//    @OneToMany(mappedBy= "payment")
-//    private List<Invoice> invoices;
-//
 //    @OneToMany(mappedBy = "payment")
 //    private List<RefundRequest> refunds;
 }
