@@ -81,6 +81,34 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    @Override
+    public void sendVerificationCode(String toEmail, String code) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(toEmail);
+            message.setSubject("[" + companyName + "] 이메일 인증 코드");
+            message.setText(buildVerificationCodeEmailBody(code));
+
+            mailSender.send(message);
+            log.info("✉️ 인증 코드 이메일 발송 성공: {}", toEmail);
+        } catch (Exception e) {
+            log.error("❌ 인증 코드 이메일 발송 실패: {}", toEmail, e);
+            throw new RuntimeException("이메일 발송에 실패했습니다", e);
+        }
+    }
+
+    private String buildVerificationCodeEmailBody(String code) {
+        return String.format(
+                "%s 회원가입을 위한 이메일 인증 코드입니다.\n\n" +
+                        "인증 코드: %s\n\n" +
+                        "5분 이내에 입력해주세요.\n\n" +
+                        "감사합니다.",
+                companyName,
+                code
+        );
+    }
+
     /**
      * 환불 요청 접수 이메일 발송
      */

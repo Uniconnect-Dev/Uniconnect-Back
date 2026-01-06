@@ -120,41 +120,57 @@ public class PaymentDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class InvoiceCreateRequest {
-        @NotNull
+        @NotNull(message = "결제 ID는 필수입니다")
         private Long paymentId;
 
-        @NotNull
-        private InvoiceType invoiceType;  // TAX_INVOICE, CASH_RECEIPT
-
-        @NotNull
+        @NotNull(message = "사업자등록증 ID는 필수입니다")
         private Long businessRegistrationId;
 
-        @NotNull
-        private Integer amount;
+        @NotNull(message = "발행 유형은 필수입니다")
+        private InvoiceIssueType issueType;  // TAX_INVOICE, CASH_RECEIPT
 
-        private Integer taxAmount;  // 세금계산서인 경우
+
+        @NotNull(message = "금액은 필수입니다")
+        @Positive(message = "금액은 0보다 커야 합니다")
+        private Long amount;
+
+        @NotNull(message = "세액은 필수입니다")
+        @PositiveOrZero(message = "세액은 0 이상이어야 합니다")
+        private Long taxAmount; //세금계산서인 경우
+
+        @NotBlank(message = "업종은 필수입니다")
+        private String bizType;
+
+        @NotBlank(message = "업태는 필수입니다")
+        private String bizItem;
+
+        @Email(message = "유효한 이메일 형식이 아닙니다")
+        private String email;
 
         private String notes;  // 비고
-
-        @NotNull
-        private Long samplingRequestId;  // 어느 샘플링에 대한 송장인지
     }
 
     @Data
     @Builder
     public static class InvoiceResponse {
         private Long invoiceId;
-        private String invoiceNumber;
-        private InvoiceType invoiceType;
-        private InvoiceStatus status;
-        private Integer amount;
-        private Integer taxAmount;
-        private Integer totalAmount;
-        private LocalDateTime issuedAt;
-        private String invoiceUrl;  // PDF URL
-        private String taxOfficeConfirmationNumber;  // 국세청 확인 번호
+        private String registrationNo;  // 세금계산서/영수증 번호
+        private InvoiceIssueType issueType;
+        private String status;
+        private Long amount;
+        private Long taxAmount;
+
         private String companyName;
         private String representativeName;
+        private String address;
+        private String bizType;
+        private String bizItem;
+        private String email;
+
+        private String businessRegistrationNo;
+        private String taxOfficeConfirmationNumber;  // 국세청 확인 번호
+        private LocalDateTime issuedAt;
+        private LocalDateTime createdAt;
     }
 
     //user가 생성

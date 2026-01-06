@@ -1,36 +1,51 @@
--- business_registrations 테이블에 company_id 추가
+-- V50__add_company_id_to_business_registrations.sql
+-- 목적: business_registrations 테이블에 company 관계 추가 및 invoices 테이블 수정
 
--- 1. company_id 컬럼 추가
+-- ===== 1) business_registrations 테이블 수정 =====
+
+-- 1-1) company_id 칼럼 추가
 ALTER TABLE business_registrations
-    ADD COLUMN IF NOT EXISTS company_id BIGINT;
+    ADD COLUMN IF NOT EXISTS company_id BIGINT NOT NULL;
 
--- 2. manager_email 컬럼 추가 (결제 송장 발송용)
-ALTER TABLE business_registrations
-    ADD COLUMN IF NOT EXISTS manager_email VARCHAR(120);
-
--- 3. 기존 데이터 마이그레이션 (User를 통해 Company 연결)
--- user 테이블에 company_id가 있다면 그것을 활용
-UPDATE business_registrations
-SET company_id = (
-    SELECT u.company_id
-    FROM users u
-    WHERE u.user_id = business_registrations.user_id
-)
-WHERE company_id IS NULL AND user_id IS NOT NULL;
-
--- 4. 외래키 제약 추가
+-- 1-2) company_id에 대한 FK 생성
 ALTER TABLE business_registrations
     ADD CONSTRAINT fk_business_registrations_company_id
-        FOREIGN KEY (company_id) REFERENCES companies(company_id);
+        FOREIGN KEY (company_id) REFERENCES companies(company_id) ON DELETE CASCADE;
 
--- 5. 유니크 제약 추가 (회사당 1개의 사업자등록증)
-ALTER TABLE business_registrations
-    ADD CONSTRAINT uk_business_registrations_company_id
-        UNIQUE(company_id);
-
--- 6. 인덱스 생성
+-- 1-3) 조회 성능 향상을 위한 인덱스
 CREATE INDEX IF NOT EXISTS idx_business_registrations_company_id
     ON business_registrations(company_id);
 
-CREATE INDEX IF NOT EXISTS idx_business_registrations_registration_no
-    ON business_registrations(registration_no);
+CREATE INDEX IF NOT EXISTS idx_business_registrations_user_company
+    ON business_registrations(user_id, company_id);
+
+-- ===== 2) invoices 테이블 수정 =====
+
+-- 2-1) 필수 칼럼 추가 (이미 있으면 무시)
+ALTER TABLE invoices
+    ADD COLUMN IF NOT EXISTS amount BIGINT,
+    ADD COLUMN IF NOT EXISTS tax_amount BIGINT,
+    ADD COLUMN IF NOT EXISTS status VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS issued_at TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS tax_office_confirmation_no VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS business_registration_no VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- 2-2) business_registration_id FK 생성 (없으면)
+ALTER TABLE invoices
+    ADD CONSTRAINT fk_invoices_business_registration_id
+        FOREIGN KEY (business_registration_id) REFERENCES business_registrations(registration_id) ON DELETE CASCADE;
+
+-- 2-3) invoices 테이블 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_invoices_business_registration_id
+    ON invoices(business_registration_id);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_company_id
+    ON invoices(company_id);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_status
+    ON invoices(status);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_issued_at
+    ON invoices(issued_at);

@@ -22,7 +22,7 @@ import java.util.List;
 public class PaymentController {
     private final PaymentService paymentService;
     private final PaymentMethodService paymentMethodService;
-    private final InvoiceService invoiceService;
+//    private final InvoiceService invoiceService;
     private final RefundService refundService;
 
     // ===== 1. 결제 내역 조회 =====
@@ -175,18 +175,15 @@ public class PaymentController {
 
     // ===== 5. 세금계산서/영수증 발행 (Company) =====
 
-    /**
-     * 기업 세금계산서/영수증 발행
-     */
-    @PostMapping("/companies/{companyId}/invoices")
-    @Operation(summary = "기업 세금계산서/영수증 발행")
-    public ResponseEntity<PaymentDto.InvoiceResponse> createInvoiceForCompany(
-            @Parameter(description = "기업 ID", example = "1")
-            @PathVariable Long companyId,
-            @RequestBody PaymentDto.InvoiceCreateRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(invoiceService.createInvoice(companyId, request));
-    }
+//    @PostMapping("/companies/{companyId}/invoices")
+//    @Operation(summary = "기업 세금계산서/영수증 발행")
+//    public ResponseEntity<PaymentDto.InvoiceResponse> createInvoiceForCompany(
+//            @Parameter(description = "기업 ID", example = "1")
+//            @PathVariable Long companyId,
+//            @RequestBody PaymentDto.InvoiceCreateRequest request) {
+//        return ResponseEntity.status(HttpStatus.CREATED)
+//                .body(invoiceService.createInvoice(companyId, request));
+//    }
 
 //    /**
 //     * 기업 세금계산서/영수증 다운로드

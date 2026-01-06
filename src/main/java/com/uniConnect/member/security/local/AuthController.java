@@ -1,7 +1,10 @@
 package com.uniConnect.member.security.local;
 
 import com.uniConnect.member.security.local.dto.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -13,26 +16,24 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name="auth API", description= "로그인, 회원가입 관련 API")
 public class AuthController {
     private final AuthService authService;
 
+    @Operation(summary = "로그인", description = "JWT 인증을 사용해 계정 로그인합니다.")
     @PostMapping("/login")
     public ResponseEntity<AuthDto.LocalLoginResp> login(@RequestBody AuthDto.LocalLoginReq request) {
         return ResponseEntity.ok(authService.login(request));
-    }
-
-    @PostMapping("/signup")
-    public ResponseEntity<String> signup(@RequestBody LocalSignupReq request) {
-        authService.signup(request);
-        return ResponseEntity.ok("회원가입 성공");
     }
 
     /**
      * POST /auth/logout
      * JWT 기반 로그아웃
      */
+    @Operation(summary = "로그아웃", description = "refresh token을 파기하며 로그아웃합니다.")
     @PostMapping("/logout")
     public ResponseEntity<AuthDto.LocalLogoutResp> logout(
+            @CookieValue(value="REFRESH_TOKEN", required=false) String refreshToken,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             HttpServletResponse response,
             @AuthenticationPrincipal CustomUser user
@@ -70,5 +71,26 @@ public class AuthController {
         cookie.setHttpOnly(true);
         cookie.setSecure(false); // HTTPS 환경에서는 true
         response.addCookie(cookie);
+    }
+
+    @Operation(summary = "이메일 인증 코드 발송", description = "이메일로 6자리 인증 코드를 발송합니다.")
+    @PostMapping("/email/send-code")
+    public ResponseEntity<AuthDto.SendVerificationCodeResp> sendVerificationCode(
+            @Valid @RequestBody AuthDto.SendVerificationCodeReq request
+    ) {
+        return ResponseEntity.ok(authService.sendVerificationCode(request));
+    }
+
+    @Operation(summary = "이메일 코드 인증", description = "이메일 코드를 입력해 인증합니다.")
+    @PostMapping("/email/verify-code")
+    public ResponseEntity<AuthDto.VerifyEmailCodeResp> verifyEmailCode(
+            @Valid @RequestBody AuthDto.VerifyEmailCodeReq request) {
+        return ResponseEntity.ok(authService.verifyEmailCode(request));
+    }
+
+    @Operation(summary = "회원가입", description = "필수 사항들을 입력해 회원가입합니다.")
+    @PostMapping("/signup")
+    public ResponseEntity<AuthDto.SignUpResp> signup(@Valid @RequestBody AuthDto.SignUpReq request) {
+        return ResponseEntity.ok(authService.signup(request));
     }
 }

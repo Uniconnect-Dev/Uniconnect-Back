@@ -2,11 +2,8 @@ package com.uniConnect.member.security.local.dto;
 
 import com.uniConnect.member.enums.UserRole;
 import com.uniConnect.member.enums.UserStatus;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.*;
 import lombok.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 
@@ -71,8 +68,8 @@ public class AuthDto {
 
         // 회원 정보
         @NotBlank(message = "아이디는 필수입니다")
-        @Size(min = 4, max = 20, message = "아이디는 4자 이상 20자 이하여야 합니다")
-        @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "아이디는 영문, 숫자, 언더스코어만 사용 가능합니다")
+//        @Size(min = 4, max = 20, message = "아이디는 4자 이상 20자 이하여야 합니다")
+//        @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "아이디는 영문, 숫자, 언더스코어만 사용 가능합니다")
         private String username;
 
         @NotBlank(message = "비밀번호는 필수입니다")
@@ -85,22 +82,28 @@ public class AuthDto {
         private String passwordConfirm;
 
         // 기업 정보
-        @NotBlank(message = "브랜드명은 필수입니다")
-        private String brandName;
+//        @NotBlank(message = "브랜드명은 필수입니다")
+//        private String brandName;
 
         @NotBlank(message = "담당자 이름은 필수입니다")
         private String managerName;
 
         @NotBlank(message = "연락처는 필수입니다")
-        @Pattern(regexp = "^01[0-9]-?\\d{3,4}-?\\d{4}$", message = "유효한 전화번호 형식이 아닙니다")
-        private String phone;
+//        @Pattern(regexp = "^01[0-9]-?\\d{3,4}-?\\d{4}$", message = "유효한 전화번호 형식이 아닙니다")
+//        private String phone;
 
         @NotBlank(message = "이메일은 필수입니다")
         @Email(message = "유효한 이메일 형식이 아닙니다")
         private String email;
 
-        @NotBlank(message = "이메일 인증 코드는 필수입니다")
+        @NotBlank(message = "이메일 인증 코드는 필수입니다") //빈 str자체가 금지
         private String emailVerificationCode;
+
+        @NotNull(message = "사용자 역할은 필수입니다")
+        private UserRole Userrole;
+
+        @NotNull(message = "사용자 상태는 필수입니다")
+        private UserStatus UserStatus;
     }
 
     @Data
@@ -123,10 +126,11 @@ public class AuthDto {
         private String username;
     }
 
+    // ===== 이메일 인증 =====
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class EmailCheckReq {
+    public static class SendVerificationCodeReq {
         @NotBlank(message = "이메일은 필수입니다")
         @Email(message = "유효한 이메일 형식이 아닙니다")
         private String email;
@@ -136,30 +140,31 @@ public class AuthDto {
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
-    public static class VerificationResp {
-        private boolean available;
-        private String message;
-        private String status;  // "success", "duplicate", "invalid_format", "error"
+    public static class SendVerificationCodeResp {
+        private boolean success;
+        private String message;  // "인증 코드가 이메일로 전송되었습니다"
     }
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class EmailVerificationCodeReq {
+    public static class VerifyEmailCodeReq {
         @NotBlank(message = "이메일은 필수입니다")
         @Email(message = "유효한 이메일 형식이 아닙니다")
-        private String email;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class EmailVerificationCodeCheckReq {
-        @NotBlank(message = "이메일은 필수입니다")
         private String email;
 
         @NotBlank(message = "인증 코드는 필수입니다")
         @Size(min = 6, max = 6, message = "인증 코드는 6자리입니다")
         private String code;
     }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class VerifyEmailCodeResp {
+        private boolean success;
+        private String message;  // "이메일 인증이 완료되었습니다"
+    }
 }
+

@@ -15,6 +15,7 @@ public enum ErrorCode {
     // 요청 관련
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력 값입니다."),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "허용되지 않은 요청 방식입니다."),
+    RESTAPI_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "허용되지 않은 외부 api입니다."),
 
     // 계약서 관련
     CONTRACT_NOT_FOUND(HttpStatus.NOT_FOUND, "계약서를 찾을 수 없습니다."),

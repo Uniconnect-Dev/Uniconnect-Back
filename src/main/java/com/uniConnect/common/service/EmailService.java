@@ -8,6 +8,12 @@ import com.uniConnect.payment.entity.RefundRequest;
  * 송장, 환불 등 다양한 알림 이메일을 발송합니다.
  */
 public interface EmailService {
+    /**
+     * 회원가입 코드용 이메일 발송
+     * @param recipientEmail 받는 사람
+     * @param code
+     */
+    void sendVerificationCode(String recipientEmail, String code);
 
     /**
      * 세금계산서/영수증 발급 이메일 발송
