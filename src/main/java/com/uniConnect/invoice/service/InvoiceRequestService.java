@@ -1,6 +1,8 @@
 package com.uniConnect.invoice.service;
 
 
+//세금계산서/영수증 발행: 사업자등록 정보 입력, 국세청 api 연동
+//결제 완료-> payment 생성-> invoiceReq 조회해 찾기-> invoice 자동c-> 국세청 api 연동
 import com.uniConnect.invoice.dto.request.InvoiceRequestCreateDto;
 import com.uniConnect.invoice.dto.response.InvoiceMyRequestDto;
 import com.uniConnect.invoice.dto.response.InvoiceRequestQueryDto;

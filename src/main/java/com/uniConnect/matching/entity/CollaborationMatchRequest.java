@@ -9,6 +9,7 @@ import com.uniConnect.company.entity.Company;
 import com.uniConnect.sampling.entity.*;
 import com.uniConnect.partnership.entity.CollaborationProposal;
 import com.uniConnect.global.converter.EnumPascalCaseConverter;
+import com.uniConnect.studentOrg.enums.CollaborationType;
 import jakarta.persistence.*;
 import lombok.*;
 

@@ -1,0 +1,51 @@
+-- -- V50__add_company_id_to_business_registrations.sql
+-- -- 목적: business_registrations 테이블에 company 관계 추가 및 invoices 테이블 수정
+--
+-- -- ===== 1) business_registrations 테이블 수정 =====
+--
+-- -- 1-1) company_id 칼럼 추가
+-- ALTER TABLE business_registrations
+--     ADD COLUMN IF NOT EXISTS company_id BIGINT NOT NULL;
+--
+-- -- 1-2) company_id에 대한 FK 생성
+-- ALTER TABLE business_registrations
+--     ADD CONSTRAINT fk_business_registrations_company_id
+--         FOREIGN KEY (company_id) REFERENCES companies(company_id) ON DELETE CASCADE;
+--
+-- -- 1-3) 조회 성능 향상을 위한 인덱스
+-- CREATE INDEX IF NOT EXISTS idx_business_registrations_company_id
+--     ON business_registrations(company_id);
+--
+-- CREATE INDEX IF NOT EXISTS idx_business_registrations_user_company
+--     ON business_registrations(user_id, company_id);
+--
+-- -- ===== 2) invoices 테이블 수정 =====
+--
+-- -- 2-1) 필수 칼럼 추가 (이미 있으면 무시)
+-- ALTER TABLE invoices
+--     ADD COLUMN IF NOT EXISTS amount BIGINT,
+--     ADD COLUMN IF NOT EXISTS tax_amount BIGINT,
+--     ADD COLUMN IF NOT EXISTS status VARCHAR(20),
+--     ADD COLUMN IF NOT EXISTS issued_at TIMESTAMP,
+--     ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMP,
+--     ADD COLUMN IF NOT EXISTS tax_office_confirmation_no VARCHAR(100),
+--     ADD COLUMN IF NOT EXISTS business_registration_no VARCHAR(20),
+--     ADD COLUMN IF NOT EXISTS notes TEXT;
+--
+-- -- 2-2) business_registration_id FK 생성 (없으면)
+-- ALTER TABLE invoices
+--     ADD CONSTRAINT fk_invoices_business_registration_id
+--         FOREIGN KEY (business_registration_id) REFERENCES business_registrations(registration_id) ON DELETE CASCADE;
+--
+-- -- 2-3) invoices 테이블 인덱스 생성
+-- CREATE INDEX IF NOT EXISTS idx_invoices_business_registration_id
+--     ON invoices(business_registration_id);
+--
+-- CREATE INDEX IF NOT EXISTS idx_invoices_company_id
+--     ON invoices(company_id);
+--
+-- CREATE INDEX IF NOT EXISTS idx_invoices_status
+--     ON invoices(status);
+--
+-- CREATE INDEX IF NOT EXISTS idx_invoices_issued_at
+--     ON invoices(issued_at);

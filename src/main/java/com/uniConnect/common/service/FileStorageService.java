@@ -2,6 +2,7 @@ package com.uniConnect.common.service;
 
 import org.springframework.web.multipart.MultipartFile;
 
+//s3service만 사용
 public interface FileStorageService {
 
     String uploadFile(String bucket, String key, MultipartFile file);
