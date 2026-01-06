@@ -13,16 +13,17 @@ import java.time.LocalDateTime;
 public interface SamplingReportRepository extends JpaRepository<SamplingReport, Long>, SamplingReportRepositoryCustom {
 
     @Query("""
-        SELECT sr
-        FROM SamplingReport sr
-        JOIN sr.campaign c
-        JOIN c.company comp
-        JOIN comp.users u
-        WHERE u.userId = :userId
-        AND (:status IS NULL OR sr.status = :status)
-        AND sr.createdAt BETWEEN :start AND :end
-        ORDER BY sr.createdAt DESC
-    """)
+SELECT sr
+FROM SamplingReport sr
+JOIN sr.collaboration col
+JOIN col.matchRequest m
+JOIN m.company comp
+JOIN comp.users u
+WHERE u.userId = :userId
+AND (:status IS NULL OR sr.status = :status)
+AND sr.createdAt BETWEEN :start AND :end
+ORDER BY sr.createdAt DESC
+""")
     Page<SamplingReport> findReports(
             @Param("userId") Long userId,
             @Param("status") SamplingReportStatus status,
@@ -33,15 +34,16 @@ public interface SamplingReportRepository extends JpaRepository<SamplingReport, 
 
 
     @Query("""
-        SELECT sr
-        FROM SamplingReport sr
-        JOIN sr.campaign c
-        JOIN c.company comp
-        JOIN comp.users u
-        WHERE u.userId = :userId
-        AND sr.createdAt BETWEEN :start AND :end
-        ORDER BY sr.createdAt DESC
-    """)
+SELECT sr
+FROM SamplingReport sr
+JOIN sr.collaboration col
+JOIN col.matchRequest m
+JOIN m.company comp
+JOIN comp.users u
+WHERE u.userId = :userId
+AND sr.createdAt BETWEEN :start AND :end
+ORDER BY sr.createdAt DESC
+""")
     Page<SamplingReport> findReportsByCompanyUserId(
             @Param("userId") Long userId,
             @Param("start") LocalDateTime start,

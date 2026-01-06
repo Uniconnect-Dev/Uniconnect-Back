@@ -1,6 +1,8 @@
 package com.uniConnect.campaign.entity;
 
+import com.uniConnect.collaboration.entity.*;
 import com.uniConnect.campaign.enums.SenderType;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -27,6 +29,11 @@ public class MatchingMessage {
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "matching_id")
-    private MatchingRequest matching;
+    @JoinColumn(name = "match_request_id")
+    private CollaborationMatchRequest matchRequest;
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+    }
 }

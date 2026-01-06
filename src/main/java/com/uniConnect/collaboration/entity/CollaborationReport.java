@@ -47,6 +47,8 @@ public class CollaborationReport {
 
     @PreUpdate
     public void preUpdate() {
+        this.createdAt = LocalDateTime.now();
         this.uploadedAt = LocalDateTime.now();
+        this.status = ReportStatus.Submitted;
     }
 }

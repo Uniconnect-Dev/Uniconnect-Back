@@ -9,20 +9,19 @@ import com.uniConnect.member.repository.*;
 import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.global.exception.ErrorCode;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
 
-import com.uniConnect.qna.dto.QnaCreateRequest;
-import com.uniConnect.qna.dto.QuestionDetailResponse;
+import com.uniConnect.s3.S3FileService;
+import com.uniConnect.qna.dto.*;
 import com.uniConnect.qna.entity.QnaAnswer;
 import com.uniConnect.qna.entity.QnaQuestion;
 import com.uniConnect.qna.entity.QnaQuestionFile;
-import com.uniConnect.qna.enums.QuestionStatus;
-import com.uniConnect.qna.enums.QnaType;
-import com.uniConnect.qna.repository.QnaAnswerRepository;
-import com.uniConnect.qna.repository.QnaQuestionRepository;
+import com.uniConnect.qna.enums.*;
+import com.uniConnect.qna.repository.*;
 
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,77 +35,79 @@ public class QnaService {
     private final StudentOrgRepository studentOrgRepository;
     private final QnaQuestionRepository questionRepository;
     private final QnaAnswerRepository answerRepository;
-    private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
+    private final S3FileService s3FileService;
+
+    @Value("${app.s3.bucket}")
+    private String bucketName;
 
     // ----------------------------------------
-    // 기업 문의 생성 (JWT userId 기반)
-    // ----------------------------------------
-    @Transactional
-    public Long createCompanyQna(QnaCreateRequest req, Long userId) {
-
-        Company company = companyRepository.findByMainContactId(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
-
-        QnaQuestion question = QnaQuestion.builder()
-                .type(QnaType.Company)
-                .company(company)
-                .title(req.title())
-                .content(req.content())
-                .password(passwordEncoder.encode(req.password()))
-                .agreePersonalInfo(req.agreePersonalInfo())
-                .agreeNotification(req.agreeNotification())
-                .status(QuestionStatus.Pending)
-                .build();
-
-        saveFiles(req, question);
-
-        return questionRepository.save(question).getQuestionId();
-    }
-
-    // ----------------------------------------
-    // 학생단체 문의 생성 (JWT userId 기반)
+    // 문의 생성
     // ----------------------------------------
     @Transactional
-    public Long createStudentOrgQna(QnaCreateRequest req, Long userId) {
-
+    public Long createQna(
+            Long userId,
+            String title,
+            String content,
+            List<MultipartFile> files,
+            Boolean agreePersonalInfo,
+            Boolean agreeNotification
+    ) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        StudentOrg org = user.getStudentOrg();
-        if (org == null) {
+        QnaQuestion question = new QnaQuestion();
+        question.setTitle(title);
+        question.setContent(content);
+        question.setAgreePersonalInfo(agreePersonalInfo);
+        question.setAgreeNotification(agreeNotification);
+        question.setStatus(QuestionStatus.Pending);
+
+        if (user.getCompany() != null) {
+            question.setType(QnaType.Company);
+            question.setCompany(user.getCompany());
+        } else if (user.getStudentOrg() != null) {
+            question.setType(QnaType.StudentOrg);
+            question.setStudentOrg(user.getStudentOrg());
+        } else {
             throw new CustomException(ErrorCode.ENTITY_NOT_FOUND);
         }
 
-        QnaQuestion question = QnaQuestion.builder()
-                .type(QnaType.StudentOrg)
-                .studentOrg(org)
-                .title(req.title())
-                .content(req.content())
-                .password(passwordEncoder.encode(req.password()))
-                .agreePersonalInfo(req.agreePersonalInfo())
-                .agreeNotification(req.agreeNotification())
-                .status(QuestionStatus.Pending)
-                .build();
+        questionRepository.save(question);
 
-        saveFiles(req, question);
+        if (files != null && !files.isEmpty()) {
+            uploadFiles(question, files);
+        }
 
-        return questionRepository.save(question).getQuestionId();
+        return question.getQuestionId();
     }
 
-    // 공통 파일 저장 로직
-    private void saveFiles(QnaCreateRequest req, QnaQuestion question) {
-        if (req.fileUrls() != null) {
-            for (int i = 0; i < req.fileUrls().size(); i++) {
-                QnaQuestionFile file = QnaQuestionFile.builder()
+    private void uploadFiles(QnaQuestion question, List<MultipartFile> files) {
+
+        for (MultipartFile file : files) {
+
+            try {
+                String key = "qna/"
+                        + question.getQuestionId()
+                        + "_"
+                        + file.getOriginalFilename();
+
+                String uploadedKey = s3FileService.upload(bucketName, key, file);
+
+                QnaQuestionFile qnaFile = QnaQuestionFile.builder()
                         .question(question)
-                        .fileUrl(req.fileUrls().get(i))
-                        .originalFilename(req.originalNames().get(i))
+                        .fileUrl(uploadedKey)
+                        .originalFilename(file.getOriginalFilename())
                         .build();
-                question.getFiles().add(file);
+
+                question.getFiles().add(qnaFile);
+
+            } catch (Exception e) {
+                throw new RuntimeException("Q&A 파일 업로드 실패", e);
             }
         }
     }
+
 
     // ----------------------------------------
     // 상세 조회
@@ -136,6 +137,73 @@ public class QnaService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public MyQnaSummaryResponse getMyQnaSummary(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<QnaQuestion> questions;
+        long totalCount;
+        long pendingCount;
+        long answeredCount;
+
+        if (user.getCompany() != null) {
+
+            Long companyId = user.getCompany().getCompanyId();
+
+            questions = questionRepository
+                    .findAllByCompanyCompanyIdOrderByCreatedAtDesc(companyId);
+
+            totalCount = questionRepository.countByCompanyCompanyId(companyId);
+            pendingCount = questionRepository.countByCompanyCompanyIdAndStatus(
+                    companyId, QuestionStatus.Pending
+            );
+            answeredCount = questionRepository.countByCompanyCompanyIdAndStatus(
+                    companyId, QuestionStatus.AnswerCompleted
+            );
+
+        } else if (user.getStudentOrg() != null) {
+
+            Long orgId = user.getStudentOrg().getStudentOrgId();
+
+            questions = questionRepository
+                    .findAllByStudentOrgStudentOrgIdOrderByCreatedAtDesc(orgId);
+
+            totalCount = questionRepository.countByStudentOrgStudentOrgId(orgId);
+            pendingCount = questionRepository.countByStudentOrgStudentOrgIdAndStatus(
+                    orgId, QuestionStatus.Pending
+            );
+            answeredCount = questionRepository.countByStudentOrgStudentOrgIdAndStatus(
+                    orgId, QuestionStatus.AnswerCompleted
+            );
+
+        } else {
+            throw new CustomException(ErrorCode.ENTITY_NOT_FOUND);
+        }
+
+        return MyQnaSummaryResponse.builder()
+                .totalCount(totalCount)
+                .pendingCount(pendingCount)
+                .answeredCount(answeredCount)
+                .questions(
+                        questions.stream()
+                                .map(q -> QuestionDetailResponse.builder()
+                                        .questionId(q.getQuestionId())
+                                        .title(q.getTitle())
+                                        .content(q.getContent())
+                                        .status(q.getStatus().name())
+                                        .createdAt(q.getCreatedAt())
+                                        .answerContent(
+                                                q.getAnswer() != null ? q.getAnswer().getContent() : null
+                                        )
+                                        .build()
+                                )
+                                .toList()
+                )
+                .build();
+    }
+
     // ----------------------------------------
     // 관리자 답변
     // ----------------------------------------
@@ -156,17 +224,6 @@ public class QnaService {
 
         answerRepository.save(answer);
         question.setStatus(QuestionStatus.AnswerCompleted);
-    }
-
-    // ----------------------------------------
-    // 비밀번호 검증
-    // ----------------------------------------
-    @Transactional(readOnly = true)
-    public boolean verifyPassword(Long questionId, String inputPassword) {
-        QnaQuestion question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
-
-        return passwordEncoder.matches(inputPassword, question.getPassword());
     }
 
     // ----------------------------------------
@@ -216,6 +273,88 @@ public class QnaService {
                         .status(q.getStatus().name())
                         .createdAt(q.getCreatedAt())
                         .answerContent(q.getAnswer() != null ? q.getAnswer().getContent() : null)
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestionDetailResponse> getMyQnaList(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<QnaQuestion> questions;
+
+        if (user.getCompany() != null) {
+            // 기업 사용자
+            questions = questionRepository
+                    .findAllByCompanyCompanyIdOrderByCreatedAtDesc(
+                            user.getCompany().getCompanyId()
+                    );
+
+        } else if (user.getStudentOrg() != null) {
+            // 학생단체 사용자
+            questions = questionRepository
+                    .findAllByStudentOrgStudentOrgIdOrderByCreatedAtDesc(
+                            user.getStudentOrg().getStudentOrgId()
+                    );
+
+        } else {
+            throw new CustomException(ErrorCode.ENTITY_NOT_FOUND);
+        }
+
+        return questions.stream()
+                .map(q -> QuestionDetailResponse.builder()
+                        .questionId(q.getQuestionId())
+                        .title(q.getTitle())
+                        .content(q.getContent())
+                        .status(q.getStatus().name())
+                        .createdAt(q.getCreatedAt())
+                        .answerContent(
+                                q.getAnswer() != null ? q.getAnswer().getContent() : null
+                        )
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestionDetailResponse> getMyQnaByStatus(
+            Long userId,
+            QuestionStatus status
+    ) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        List<QnaQuestion> questions;
+
+        if (user.getCompany() != null) {
+
+            questions = questionRepository
+                    .findAllByCompanyCompanyIdAndStatusOrderByCreatedAtDesc(
+                            user.getCompany().getCompanyId(), status
+                    );
+
+        } else if (user.getStudentOrg() != null) {
+
+            questions = questionRepository
+                    .findAllByStudentOrgStudentOrgIdAndStatusOrderByCreatedAtDesc(
+                            user.getStudentOrg().getStudentOrgId(), status
+                    );
+
+        } else {
+            throw new CustomException(ErrorCode.ENTITY_NOT_FOUND);
+        }
+
+        return questions.stream()
+                .map(q -> QuestionDetailResponse.builder()
+                        .questionId(q.getQuestionId())
+                        .title(q.getTitle())
+                        .content(q.getContent())
+                        .status(q.getStatus().name())
+                        .createdAt(q.getCreatedAt())
+                        .answerContent(
+                                q.getAnswer() != null ? q.getAnswer().getContent() : null
+                        )
                         .build())
                 .toList();
     }

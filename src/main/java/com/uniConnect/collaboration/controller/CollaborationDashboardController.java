@@ -144,7 +144,7 @@ public class CollaborationDashboardController {
 
         return ApiResponse.success(
                 "인수증 제출 완료",
-                dashboardService.submitReceipt(request, receiptImage, userId)
+                dashboardService.submitReceipt(request, receiptImage)
         );
     }
 

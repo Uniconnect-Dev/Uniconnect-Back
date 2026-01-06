@@ -7,6 +7,8 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Comparator;
+
 
 @Getter
 @Setter
@@ -78,7 +80,7 @@ public class CollaborationDashboardResponse {
             String role
     ) {
         ReceiptConfirmation latest = receipts.stream()
-                .reduce((a, b) -> b)
+                .max(Comparator.comparing(ReceiptConfirmation::getSubmittedAt))
                 .orElse(null);
 
         // 빌더 생성

@@ -5,6 +5,7 @@ import lombok.*;
 
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
+//local login 방식 전용 정보
 @Table(name = "local_credentials",
         uniqueConstraints = @UniqueConstraint(columnNames = {"loginId"}))
 public class LocalCredential {

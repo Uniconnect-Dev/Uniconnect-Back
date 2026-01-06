@@ -13,7 +13,7 @@ public class ReportSubmitResponseDto {
     public static ReportSubmitResponseDto from(SamplingReport report) {
         return ReportSubmitResponseDto.builder()
                 .reportId(report.getReportId())
-                .campaignId(report.getCampaign().getCampaignId())
+                .campaignId(report.getCollaboration().getMatchRequest().getCampaign().getCampaignId())
                 .status(report.getStatus().name())
                 .build();
     }

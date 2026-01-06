@@ -2,28 +2,57 @@ package com.uniConnect.matching.repository;
 
 import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import com.uniConnect.campaign.enums.MatchingStatus;
+import com.uniConnect.matching.enums.MatchSender;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-
+//기업,학생 샘플링, 협업
 public interface CollaborationMatchRequestRepository extends JpaRepository<CollaborationMatchRequest, Long> {
 
-    // 학생단체 기준
-    List<CollaborationMatchRequest> findByStudentOrgId(Long studentOrgId);
-    Long countByStudentOrgId(Long studentOrgId);
-    Long countByStudentOrgIdAndStatus(Long studentOrgId, MatchingStatus status);
+    void deleteByCampaign_CampaignId(Long campaignId);
 
-    // 기업 기준
-    List<CollaborationMatchRequest> findByCompanyId(Long companyId);
-    Long countByCompanyId(Long companyId);
-    Long countByCompanyIdAndStatus(Long companyId, MatchingStatus status);
+    void deleteBySamplingProposal_ProposalId(Long proposalId);
 
-    // 받은 요청 (역방향)
-    List<CollaborationMatchRequest> findByCompanyIdAndStatus(Long companyId, MatchingStatus status);
+    /* ===== 학생단체 기준 ===== */
 
-    Page<CollaborationMatchRequest> findByStudentOrgId(Long studentOrgId, Pageable pageable);
+    long countByStudentOrg_StudentOrgIdAndSender(
+            Long studentOrgId,
+            MatchSender sender
+    );
 
-    Page<CollaborationMatchRequest> findByCompanyId(Long companyId, Pageable pageable);
+    long countByStudentOrg_StudentOrgIdAndStatus(
+            Long studentOrgId,
+            MatchingStatus status
+    );
+
+    Page<CollaborationMatchRequest> findByStudentOrg_StudentOrgIdAndSender(
+            Long studentOrgId,
+            MatchSender sender,
+            Pageable pageable
+    );
+
+    /* ===== 기업 기준 ===== */
+
+    long countByCompany_CompanyIdAndSender(
+            Long companyId,
+            MatchSender sender
+    );
+
+    long countByCompany_CompanyIdAndStatus(
+            Long companyId,
+            MatchingStatus status
+    );
+
+    Page<CollaborationMatchRequest> findByCompany_CompanyIdAndSender(
+            Long companyId,
+            MatchSender sender,
+            Pageable pageable
+    );
+
+    boolean existsByCampaign_CampaignIdAndCompany_CompanyId(
+            Long campaignId,
+            Long companyId
+    );
 }

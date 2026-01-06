@@ -1,6 +1,6 @@
 package com.uniConnect.collaboration.entity;
 
-import com.uniConnect.campaign.entity.MatchingRequest;
+import com.uniConnect.collaboration.entity.*;
 import jakarta.persistence.*;
 import lombok.*;
 import com.uniConnect.collaboration.enums.*;
@@ -45,4 +45,9 @@ public class ReceiptConfirmation {
 
     @Enumerated(EnumType.STRING)
     private ReceiptStatus status;
+
+    public void approve() {
+        this.status = ReceiptStatus.Approved;
+        this.approvedAt = LocalDateTime.now();
+    }
 }
