@@ -15,6 +15,7 @@ public enum ErrorCode {
     // 요청 관련
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "잘못된 입력 값입니다."),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "허용되지 않은 요청 방식입니다."),
+    RESTAPI_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "허용되지 않은 외부 api입니다."),
 
     // 계약서 관련
     CONTRACT_NOT_FOUND(HttpStatus.NOT_FOUND, "계약서를 찾을 수 없습니다."),
@@ -67,8 +68,22 @@ public enum ErrorCode {
     SIGNATURE_EXPIRED(HttpStatus.BAD_REQUEST, "서명 시간이 만료되었습니다."),
     INVALID_SIGNATURE(HttpStatus.BAD_REQUEST, "서명 검증에 실패했습니다."),
 
+    // payment 관련
+    INVALID_AMOUNT(HttpStatus.BAD_REQUEST, "금액이 일치하지 않습니다."),
+    PAYMENT_ALREADY_PROCESSED(HttpStatus.BAD_REQUEST, "이미 결제된 금액입니다."),
+    PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "결제에 실패했습니다."),
+    INVALID_PAYMENT_STATUS(HttpStatus.BAD_REQUEST, "취소 불가능한 결제상태입니다"),
+
     // 세금계산서 관련
-    INVALID_INVOICE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 세금계산서 발행 방식입니다.");
+    INVALID_INVOICE_TYPE(HttpStatus.BAD_REQUEST, "잘못된 세금계산서 발행 방식입니다."),
+    BUSINESS_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "사업자 검증에 실패하였습니다"),
+
+    // 환불 관련
+    REFUND_FAILED(HttpStatus.BAD_REQUEST, "PG사 환불 처리에 실패하였습니다"),
+
+    // 암,복호화 관련
+    ENCRYPTION_FAILED(HttpStatus.BAD_REQUEST, "암호화에 실패하였습니다."),
+    DECRYPTION_FAILED(HttpStatus.BAD_REQUEST, "복호화에 실패하였습니다.");
 
 
     private final HttpStatus status;

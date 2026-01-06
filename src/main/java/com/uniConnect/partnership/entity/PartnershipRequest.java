@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor @AllArgsConstructor @Builder
 @Entity
 @Table(name = "partnership_requests")
+//기업의 req->학생
 public class PartnershipRequest {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "partnership_id")

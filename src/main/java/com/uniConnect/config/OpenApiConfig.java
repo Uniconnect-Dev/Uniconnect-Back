@@ -7,6 +7,7 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import io.swagger.v3.oas.models.servers.Server;
 
 /**
  * Swagger springdoc-ui 구성 파일
@@ -30,6 +31,14 @@ public class OpenApiConfig {
         SecurityRequirement securityRequirement = new SecurityRequirement().addList("Bearer Authentication");
 
         return new OpenAPI()
+                .addServersItem(new Server()
+                        .url("http://ec2-3-36-92-235.ap-northeast-2.compute.amazonaws.com")
+                        .description("Production Server")
+                )
+                .addServersItem(new Server()
+                        .url("http://localhost:8080")
+                        .description("Local Server")
+                )
                 .components(new Components().addSecuritySchemes("Bearer Authentication", securityScheme))
                 .addSecurityItem(securityRequirement)
                 .info(info);
