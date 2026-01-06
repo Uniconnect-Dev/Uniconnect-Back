@@ -9,7 +9,7 @@ ALTER TABLE payments
 ALTER TABLE payments
     ADD CONSTRAINT fk_payments_student_org_id
         FOREIGN KEY (student_org_id)
-            REFERENCES student_org(student_org_id)
+            REFERENCES student_orgs(student_org_id)
             ON DELETE SET NULL;
 
 -- 3. 인덱스 생성 (StudentOrg별 결제 조회 성능 향상)

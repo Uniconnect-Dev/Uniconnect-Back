@@ -1,7 +1,6 @@
 package com.uniConnect.common.service.impl;
 
 import com.uniConnect.common.service.EmailService;
-import com.uniConnect.payment.entity.Invoice;
 import com.uniConnect.payment.entity.RefundRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,46 +39,46 @@ public class EmailServiceImpl implements EmailService {
 //    @Value("${app.email.support-email")
 //    private String supportEmail;
 
-    /**
-     * 세금계산서/영수증 발급 이메일 발송
-     */
-    @Override
-    public void sendInvoiceEmail(String recipientEmail, Invoice invoice, String pdfUrl) {
-        try {
-            log.info("[이메일 발송] 세금계산서 - Recipient: {}, Invoice ID: {}",
-                    recipientEmail, invoice.getInvoiceId());
-
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            // 기본 정보 설정
-            helper.setFrom(fromEmail);
-            helper.setTo(recipientEmail);
-            helper.setSubject("[" + companyName + "] 세금계산서/영수증 발급 안내");
-
-            // thymeleaf 템플릿 데이터 설정
-            Context context = new Context();
-            context.setVariable("invoice", invoice);
-            context.setVariable("pdfUrl", pdfUrl);
-            context.setVariable("companyName", companyName);
-            context.setVariable("issuedAt",
-                    invoice.getIssuedAt().format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")));
-            context.setVariable("amount", formatCurrency(invoice.getPayment().getAmount()));
-
-            // HTML 템플릿 렌더링
-            String htmlContent = templateEngine.process("email/invoice-email", context);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
-
-            log.info("[이메일 발송 성공] 세금계산서 - Recipient: {}", recipientEmail);
-
-        } catch (MessagingException e) {
-            log.error("[이메일 발송 실패] 세금계산서 - Recipient: {}, Error: {}",
-                    recipientEmail, e.getMessage(), e);
-            // 이메일 발송 실패는 비즈니스 로직에 영향을 주지 않도록 예외 처리
-        }
-    }
+//    /**
+//     * 세금계산서/영수증 발급 이메일 발송
+//     */
+//    @Override
+//    public void sendInvoiceEmail(String recipientEmail, Invoice invoice, String pdfUrl) {
+//        try {
+//            log.info("[이메일 발송] 세금계산서 - Recipient: {}, Invoice ID: {}",
+//                    recipientEmail, invoice.getInvoiceId());
+//
+//            MimeMessage message = mailSender.createMimeMessage();
+//            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+//
+//            // 기본 정보 설정
+//            helper.setFrom(fromEmail);
+//            helper.setTo(recipientEmail);
+//            helper.setSubject("[" + companyName + "] 세금계산서/영수증 발급 안내");
+//
+//            // thymeleaf 템플릿 데이터 설정
+//            Context context = new Context();
+//            context.setVariable("invoice", invoice);
+//            context.setVariable("pdfUrl", pdfUrl);
+//            context.setVariable("companyName", companyName);
+//            context.setVariable("issuedAt",
+//                    invoice.getIssuedAt().format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")));
+//            context.setVariable("amount", formatCurrency(invoice.getPayment().getAmount()));
+//
+//            // HTML 템플릿 렌더링
+//            String htmlContent = templateEngine.process("email/invoice-email", context);
+//            helper.setText(htmlContent, true);
+//
+//            mailSender.send(message);
+//
+//            log.info("[이메일 발송 성공] 세금계산서 - Recipient: {}", recipientEmail);
+//
+//        } catch (MessagingException e) {
+//            log.error("[이메일 발송 실패] 세금계산서 - Recipient: {}, Error: {}",
+//                    recipientEmail, e.getMessage(), e);
+//            // 이메일 발송 실패는 비즈니스 로직에 영향을 주지 않도록 예외 처리
+//        }
+//    }
 
     @Override
     public void sendVerificationCode(String toEmail, String code) {

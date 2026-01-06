@@ -1,6 +1,5 @@
 package com.uniConnect.common.service;
 
-import com.uniConnect.payment.entity.Invoice;
 import com.uniConnect.payment.entity.RefundRequest;
 
 /**
@@ -15,14 +14,14 @@ public interface EmailService {
      */
     void sendVerificationCode(String recipientEmail, String code);
 
-    /**
-     * 세금계산서/영수증 발급 이메일 발송
-     * @param recipientEmail 받는 사람 이메일
-     * @param invoice 세금계산서 정보
-     * @param pdfUrl PDF 다운로드 URL
-     */
-    void sendInvoiceEmail(String recipientEmail, Invoice invoice, String pdfUrl);
-
+//    /**
+//     * 세금계산서/영수증 발급 이메일 발송
+//     * @param recipientEmail 받는 사람 이메일
+//     * @param invoice 세금계산서 정보
+//     * @param pdfUrl PDF 다운로드 URL
+//     */
+//    void sendInvoiceEmail(String recipientEmail, Invoice invoice, String pdfUrl);
+//
     /**
      * 환불 요청 접수 이메일 발송
      * @param recipientEmail 받는 사람 이메일

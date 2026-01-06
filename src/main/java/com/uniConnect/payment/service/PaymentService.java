@@ -94,18 +94,18 @@ public class PaymentService {
         Campaign campaign = campaignRepository.findById(request.getCampaignId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-        // 3) 회사 or 학생단체 권한 확인
-        if (company != null) {
-            if (!campaign.getCompany().getCompanyId().equals(company.getCompanyId())) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED);
-            }
-            log.info("[결제 진행] Company ID: {}", company.getCompanyId());
-        } else {
-            if (!campaign.getStudentOrg().getStudentOrgId().equals(studentOrg.getStudentOrgId())) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED);
-            }
-            log.info("[결제 진행] StudentOrg ID: {}", studentOrg.getStudentOrgId());
-        }
+//        // 3) 회사 or 학생단체 권한 확인
+//        if (company != null) {
+//            if (!campaign.getCompany().getCompanyId().equals(company.getCompanyId())) {
+//                throw new CustomException(ErrorCode.UNAUTHORIZED);
+//            }
+//            log.info("[결제 진행] Company ID: {}", company.getCompanyId());
+//        } else {
+//            if (!campaign.getStudentOrg().getStudentOrgId().equals(studentOrg.getStudentOrgId())) {
+//                throw new CustomException(ErrorCode.UNAUTHORIZED);
+//            }
+//            log.info("[결제 진행] StudentOrg ID: {}", studentOrg.getStudentOrgId());
+//        }
 
         // 4) 결제 수단 조회
         PaymentMethod method = paymentMethodRepository.findById(request.getPaymentMethodId())

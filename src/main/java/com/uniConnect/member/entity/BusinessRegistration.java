@@ -2,7 +2,6 @@ package com.uniConnect.member.entity;
 
 import com.uniConnect.company.entity.Company;
 import com.uniConnect.member.enums.VerifiedStatus;
-import com.uniConnect.payment.entity.Invoice;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -58,7 +57,4 @@ public class BusinessRegistration {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;  // 추가: 회사 정보 추적
-
-    @OneToMany(mappedBy = "businessRegistration", cascade = CascadeType.ALL)
-    private List<Invoice> invoices;  // 이 사업자로 발급한 송장들
 }

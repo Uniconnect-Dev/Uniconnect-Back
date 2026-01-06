@@ -10,8 +10,17 @@ ALTER TABLE email_verifications
     ADD COLUMN IF NOT EXISTS last_sent_at TIMESTAMP;
 
 -- 2) email 칼럼을 UNIQUE로 설정 (중복 방지)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'email_verifications_email_unique'
+    ) THEN
 ALTER TABLE email_verifications
-    ADD CONSTRAINT IF NOT EXISTS email_verifications_email_unique UNIQUE (email);
+    ADD CONSTRAINT email_verifications_email_unique UNIQUE (email);
+END IF;
+END $$;
 
 -- 3) created_at 칼럼 추가 (없을 경우)
 ALTER TABLE email_verifications
