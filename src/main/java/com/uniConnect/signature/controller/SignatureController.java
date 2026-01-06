@@ -20,7 +20,6 @@ public class SignatureController {
 
     private final SignatureService signatureService;
 
-    @PostMapping
     @Operation(summary = "전자서명 저장")
     public ApiResponse<?> saveSignature(
             @Valid @RequestBody SignatureRequest request,

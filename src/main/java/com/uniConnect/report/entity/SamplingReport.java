@@ -1,7 +1,7 @@
 package com.uniConnect.report.entity;
 
-import com.uniConnect.campaign.entity.Campaign;
 import com.uniConnect.report.enums.SamplingReportStatus;
+import com.uniConnect.collaboration.entity.Collaboration;
 import com.uniConnect.survey.entity.Survey;
 import jakarta.persistence.*;
 import lombok.*;
@@ -26,8 +26,8 @@ public class SamplingReport {
     private Long reportId;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "campaign_id")
-    private Campaign campaign;
+    @JoinColumn(name = "collaboration_id", nullable = false)
+    private Collaboration collaboration;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "survey_id")

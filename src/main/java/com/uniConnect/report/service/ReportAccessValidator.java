@@ -57,7 +57,10 @@ public class ReportAccessValidator {
         SamplingReport report = samplingReportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("리포트를 찾을 수 없습니다. id=" + reportId));
 
-        Long reportCompanyId = report.getCampaign().getCompany().getCompanyId();
+        Long reportCompanyId =
+                report.getCollaboration().getMatchRequest()
+                        .getCompany()
+                        .getCompanyId();
 
         // 최종 권한 체크
         if (!userCompanyId.equals(reportCompanyId)) {

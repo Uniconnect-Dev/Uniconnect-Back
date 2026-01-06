@@ -13,24 +13,13 @@ public class CollaborationController {
 
     private final CollaborationService collaborationService;
 
-    @Operation(summary = "추천 기업 도착 처리 (Admin)",
-            description = "어드민이 기업 추천을 완료했을 때 호출하여 상태를 RecommendationReady로 변경합니다.")
-    @PostMapping("/{id}/recommendation-ready")
-    public ApiResponse<String> recommendationReady(@PathVariable Long id) {
-        collaborationService.markRecommendationReady(id);
-        return ApiResponse.success("추천 기업 상태로 변경됨");
-    }
-
-    @Operation(summary = "학생 → 특정 기업 매칭 요청",
-            description = "추천 기업 중 원하는 기업을 선택하여 매칭을 요청합니다. 상태는 WaitingCompanyResponse로 변경됩니다.")
-    @PostMapping("/{id}/request-matching")
-    public ApiResponse<String> requestMatching(
-            @PathVariable Long id,
-            @RequestParam Long companyId
-    ) {
-        collaborationService.requestMatching(id, companyId);
-        return ApiResponse.success("기업 매칭 요청 완료");
-    }
+//    @Operation(summary = "추천 기업 도착 처리 (Admin)",
+//            description = "어드민이 기업 추천을 완료했을 때 호출하여 상태를 RecommendationReady로 변경합니다.")
+//    @PostMapping("/{id}/recommendation-ready")
+//    public ApiResponse<String> recommendationReady(@PathVariable Long id) {
+//        collaborationService.markRecommendationReady(id);
+//        return ApiResponse.success("추천 기업 상태로 변경됨");
+//    }
 
     @Operation(summary = "계약서 발송 (Admin)",
             description = "기업이 제안을 수락한 후 어드민이 학생에게 계약서를 발송하며 상태를 ContractSent로 변경합니다.")

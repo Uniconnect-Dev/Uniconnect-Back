@@ -68,4 +68,10 @@ public class StudentOrg {
 
     @OneToMany(mappedBy = "studentOrg", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StudentOrgHistory> histories;
+
+    public boolean hasUser(Long userId) {
+        if (userId == null) return false;
+        return users.stream()
+                .anyMatch(u -> u.getUserId().equals(userId));
+    }
 }

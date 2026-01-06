@@ -1,7 +1,10 @@
 package com.uniConnect.contract.dto;
 
 import com.uniConnect.contract.entity.Contract;
+import com.uniConnect.collaboration.entity.Collaboration;
+import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Getter
@@ -10,6 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class ContractListItemDto {
+
     private Long contractId;
 
     private String studentOrgName;
@@ -32,14 +36,26 @@ public class ContractListItemDto {
         String campaignName = null;
         String collaborationType = null;
 
-        if (contract.getMatching() != null) {
-            var matching = contract.getMatching();
-            if (matching.getStudentOrg() != null) {
-                studentOrgName = matching.getStudentOrg().getOrganizationName();
-            }
-            if (matching.getCampaign() != null) {
-                campaignName = matching.getCampaign().getName();
-                collaborationType = matching.getCampaign().getPurpose();
+        Collaboration collab = contract.getCollaboration();
+        if (collab != null) {
+
+            CollaborationMatchRequest match = collab.getMatchRequest();
+            if (match != null) {
+
+                // 학생단체명
+                if (match.getStudentOrg() != null) {
+                    studentOrgName = match.getStudentOrg().getOrganizationName();
+                }
+
+                // 캠페인 정보
+                if (match.getCampaign() != null) {
+                    campaignName = match.getCampaign().getName();
+
+                    if (match.getCampaign().getCollaborationType() != null) {
+                        collaborationType =
+                                match.getCampaign().getCollaborationType().name();
+                    }
+                }
             }
         }
 

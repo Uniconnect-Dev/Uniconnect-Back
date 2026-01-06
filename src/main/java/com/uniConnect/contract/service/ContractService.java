@@ -62,7 +62,9 @@ public class ContractService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "해당 사용자가 속한 단체를 찾을 수 없습니다."));
 
         List<Contract> contracts =
-                contractRepository.findByMatching_StudentOrg_StudentOrgId(org.getStudentOrgId());
+                contractRepository.findByCollaboration_MatchRequest_StudentOrg_StudentOrgId(
+                        org.getStudentOrgId()
+                );
 
         return contracts.stream()
                 .map(ContractListItemDto::fromEntity)

@@ -8,5 +8,5 @@ import java.util.List;
 
 public interface CampaignTargetRepository extends JpaRepository<CampaignTarget, Long> {
 
-    List<CampaignTarget> findByCampaign_Company(Company company);
+    List<CampaignTarget> findByCampaign_CampaignId(Long campaignId);
 }

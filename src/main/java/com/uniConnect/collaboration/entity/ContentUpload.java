@@ -1,6 +1,6 @@
 package com.uniConnect.collaboration.entity;
 
-import com.uniConnect.campaign.entity.MatchingRequest;
+import com.uniConnect.collaboration.entity.*;
 import com.uniConnect.collaboration.enums.*;
 import jakarta.persistence.*;
 import lombok.*;

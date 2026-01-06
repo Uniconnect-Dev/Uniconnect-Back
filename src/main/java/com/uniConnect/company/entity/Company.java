@@ -51,4 +51,8 @@ public class Company extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "industry_id")
     private Industry industry;
+
+    public boolean hasUser(Long userId) {
+        return users.stream().anyMatch(u -> u.getUserId().equals(userId));
+    }
 }

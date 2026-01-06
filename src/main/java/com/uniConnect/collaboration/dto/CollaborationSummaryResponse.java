@@ -18,13 +18,13 @@ public class CollaborationSummaryResponse {
     private String status;         // 협업 상태
 
     public static CollaborationSummaryResponse from(Collaboration c) {
-        var matching = c.getMatching();
+        var matching = c.getMatchRequest();
         var campaign = (matching != null) ? matching.getCampaign() : null;
         var studentOrg = (matching != null) ? matching.getStudentOrg() : null;
 
         return CollaborationSummaryResponse.builder()
                 .id(c.getId())
-                .universityName(studentOrg != null ? studentOrg.getSchoolName() : null) // ✅ 여기 수정!
+                .universityName(studentOrg != null ? studentOrg.getOrganizationName() : null)
                 .eventName(campaign != null ? campaign.getName() : null)
                 .startDate(campaign != null ? campaign.getStartDate() : null)
                 .endDate(campaign != null ? campaign.getEndDate() : null)

@@ -1,17 +1,28 @@
 package com.uniConnect.campaign.entity;
 
+import com.uniConnect.global.converter.EnumPascalCaseConverter;
+
 import com.uniConnect.campaign.enums.CampaignStatus;
 import com.uniConnect.common.entity.BaseEntity;
 import com.uniConnect.company.entity.Company;
 import com.uniConnect.report.entity.SamplingReport;
 import com.uniConnect.studentOrg.entity.StudentOrg;
+import com.uniConnect.studentOrg.enums.CollaborationType;
+import com.uniConnect.studentOrg.entity.Hashtag;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.List;
 import java.time.LocalDate;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import com.fasterxml.jackson.databind.JsonNode;
 
 @Getter
 @Setter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 @Entity
@@ -67,13 +78,66 @@ public class Campaign extends BaseEntity {
     private Integer totalCost;                   // 총비용
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id")
-    private Company company;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_org_id")
     private StudentOrg studentOrg;
 
-    @OneToOne(mappedBy = "campaign", fetch = FetchType.LAZY)
-    private SamplingReport samplingReport;
+    @Column(name = "expected_participants")
+    private Integer expectedParticipants;
+
+    @Column(name = "expected_exposures")
+    private Integer expectedExposures;
+
+    @Column(name = "target_age_desc", length = 100)
+    private String targetAgeDesc;
+
+    @Column(name = "target_major_desc", length = 100)
+    private String targetMajorDesc;
+
+    @Column(name = "preferred_industry_1", length = 100)
+    private String preferredIndustry1;
+
+    @Column(name = "preferred_industry_2", length = 100)
+    private String preferredIndustry2;
+
+    @Column(name = "recommended_sampling_qty")
+    private Integer recommendedSamplingQty;
+
+    @Column(name = "booth_fee")
+    private Integer boothFee;
+
+    @Column(name = "extra_request", columnDefinition = "text")
+    private String extraRequest;
+
+    @Column(name = "proposal_file_url", columnDefinition = "text")
+    private String proposalFileUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "collaboration_type", length = 30)
+    private CollaborationType collaborationType;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "event_programs", columnDefinition = "jsonb")
+    private JsonNode eventPrograms;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "promotion_plans", columnDefinition = "jsonb")
+    private JsonNode promotionPlans;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "marketing_methods", columnDefinition = "jsonb")
+    private JsonNode marketingMethods;
+
+    @OneToMany(mappedBy = "campaign", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CampaignTarget> campaignTargets;
+
+
+    public List<Hashtag> getTargetKeywords() {
+        if (this.campaignTargets == null) {
+            return List.of();
+        }
+
+        return this.campaignTargets.stream()
+                .map(CampaignTarget::getHashtag)
+                .toList();
+    }
 }

@@ -1,14 +1,9 @@
 package com.uniConnect.matching.dto;
 
-import lombok.Getter;
-import java.time.LocalDate;
+import com.uniConnect.studentOrg.enums.CollaborationType;
 import java.util.List;
 
-@Getter
-public class CompanyMatchRequest {
-    private String eventTitle;
-    private String collaborationType;
-    private LocalDate desiredDate;
-    private String industry;
-    private java.util.List<Long> targetStudentOrgIds;
-}
+public record CompanyMatchRequest(
+        CollaborationType collaborationType,
+        List<Long> targetIds
+) {}

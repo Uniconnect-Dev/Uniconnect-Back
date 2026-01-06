@@ -1,8 +1,5 @@
 package com.uniConnect.report.service;
 
-import com.uniConnect.campaign.entity.Campaign;
-import com.uniConnect.campaign.enums.CampaignStatus;
-import com.uniConnect.campaign.repository.CampaignRepository;
 import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.global.exception.ErrorCode;
 import com.uniConnect.notification.service.AdminNotificationService;
@@ -14,6 +11,9 @@ import com.uniConnect.report.enums.SamplingReportStatus;
 import com.uniConnect.report.repository.SamplingReportFeedbackRepository;
 import com.uniConnect.report.repository.SamplingReportMediaRepository;
 import com.uniConnect.report.repository.SamplingReportRepository;
+import com.uniConnect.collaboration.entity.Collaboration;
+import com.uniConnect.collaboration.enums.CollaborationStatus;
+import com.uniConnect.collaboration.repository.CollaborationRepository;
 import com.uniConnect.s3.S3FileService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,6 +32,7 @@ import java.util.UUID;
 public class SamplingReportService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CollaborationRepository collaborationRepository;
 
     private String normalizeJson(String json) {
         if (json == null) return null;
@@ -67,7 +68,6 @@ public class SamplingReportService {
     private final SamplingReportRepository reportRepository;
     private final SamplingReportFeedbackRepository feedbackRepository;
     private final SamplingReportMediaRepository mediaRepository;
-    private final CampaignRepository campaignRepository;
     private final S3FileService s3FileService;
     private final AdminNotificationService adminNotificationService;
 
@@ -90,19 +90,23 @@ public class SamplingReportService {
             List<MultipartFile> mediaFiles,
             Long studentOrgId
     ) {
-        Campaign campaign = campaignRepository.findById(request.getCampaignId())
-                .orElseThrow(() -> new CustomException(ErrorCode.CAMPAIGN_NOT_FOUND));
+        Collaboration collaboration = collaborationRepository.findById(
+                        request.getCollaborationId()
+        ).orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        // 캠페인 상태 체크
-        if (campaign.getStatus() != CampaignStatus.ReportUploadPending) {
+        // 협업 상태 체크
+        if (collaboration.getStatus() != CollaborationStatus.WaitingReportUpload) {
             throw new CustomException(ErrorCode.INVALID_CAMPAIGN_STATE,
-                    "캠페인이 리포트 업로드 대기 상태가 아닙니다.");
+                    "협업이 리포트 업로드 대기 상태가 아닙니다.");
         }
 
         // 소유 단체 체크
-        if (!campaign.getStudentOrg().getStudentOrgId().equals(studentOrgId)) {
+        if (!collaboration.getMatchRequest()
+                .getStudentOrg()
+                .getStudentOrgId()
+                .equals(studentOrgId)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED,
-                    "이 학생단체는 본 캠페인의 리포트를 제출할 권한이 없습니다.");
+                    "이 학생단체는 본 협업의 리포트를 제출할 권한이 없습니다.");
         }
 
         // JSON 필드를 JsonNode로 변환 (try/catch 필수)
@@ -114,7 +118,7 @@ public class SamplingReportService {
         JsonNode kpiNode = parseJson(request.getKpiChartsJson());
 
         SamplingReport report = SamplingReport.builder()
-                .campaign(campaign)
+                .collaboration(collaboration)
                 .eventName(request.getEventName())
                 .brandName(request.getBrandName())
                 .productName(request.getProductName())
@@ -194,9 +198,9 @@ public class SamplingReportService {
         report.setStatus(SamplingReportStatus.Approved);
         reportRepository.save(report);
 
-        Campaign campaign = report.getCampaign();
-        campaign.setStatus(CampaignStatus.Completed);
-        campaignRepository.save(campaign);
+        Collaboration collaboration = report.getCollaboration();
+        collaboration.setStatus(CollaborationStatus.Completed);
+        collaborationRepository.save(collaboration);
     }
 
     @Transactional

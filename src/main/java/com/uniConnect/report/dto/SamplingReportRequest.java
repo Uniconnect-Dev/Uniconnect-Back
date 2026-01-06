@@ -7,7 +7,7 @@ import lombok.Setter;
 @Setter
 public class SamplingReportRequest {
 
-    private Long campaignId;
+    private Long collaborationId;
     private Long surveyId;
 
     // 기본 정보

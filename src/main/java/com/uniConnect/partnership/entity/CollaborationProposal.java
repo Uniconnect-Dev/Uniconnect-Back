@@ -1,15 +1,23 @@
 package com.uniConnect.partnership.entity;
 
 import com.uniConnect.company.entity.Company;
-import com.uniConnect.company.entity.Industry;
 import com.uniConnect.partnership.enums.ProposalStatus;
+import com.uniConnect.partnership.enums.PartnershipType;
+import com.uniConnect.partnership.enums.CollaborationPeriodType;
+import com.uniConnect.studentOrg.entity.StudentOrg;
+import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
+import org.hibernate.annotations.Type;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "collaboration_proposals")
 //기업 req->학생
@@ -20,38 +28,123 @@ public class CollaborationProposal {
     @Column(name = "proposal_id")
     private Long proposalId;
 
-    @Column(name = "name", length = 100)
-    private String name;
+    /* =========================
+       관계
+    ========================= */
 
-    @Column(name = "contact_name", length = 60)
-    private String contactName;
-
-    @Column(name = "phone", length = 20)
-    private String phone;
-
-    @Column(name = "email", length = 120)
-    private String email;
-
-    @Column(name = "content", columnDefinition = "text")
-    private String content;
-
-    @Column(name = "proposal_url", columnDefinition = "text")
-    private String proposalUrl;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", length = 20)
-    private ProposalStatus status;
-
-    @CreationTimestamp
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    // relations
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "industry_id")
-    private Industry industry;
+    /* =========================
+       제휴 분류
+    ========================= */
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "proposal_type", length = 30, nullable = false)
+    private PartnershipType proposalType;
+
+    /* =========================
+       기업 담당자 정보
+    ========================= */
+
+    @Column(name = "contact_name", length = 100, nullable = false)
+    private String contactName;
+
+    @Column(name = "contact_phone", length = 20, nullable = false)
+    private String contactPhone;
+
+    @Column(name = "contact_email", length = 120, nullable = false)
+    private String contactEmail;
+
+    /* =========================
+       제휴 정보
+    ========================= */
+
+    @Column(name = "product_or_service_name", length = 150, nullable = false)
+    private String productOrServiceName;
+
+    @Column(name = "industry", length = 50)
+    private String industry;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "period_type", length = 20, nullable = false)
+    private CollaborationPeriodType periodType;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    /* =========================
+       제안 내용
+    ========================= */
+
+    @Column(name = "proposal_content", columnDefinition = "text")
+    private String proposalContent;
+
+    @Column(name = "attachment_url", length = 500)
+    private String attachmentUrl;
+
+    /* =========================
+       JSON 컬럼
+    ========================= */
+
+    @Type(JsonBinaryType.class)
+    @Column(
+            name = "collaboration_methods_json",
+            columnDefinition = "json",
+            nullable = false
+    )
+    private String collaborationMethodsJson;
+
+    @Type(JsonBinaryType.class)
+    @Column(
+            name = "expected_outcomes_json",
+            columnDefinition = "json"
+    )
+    private String expectedOutcomesJson;
+
+    /* =========================
+       동의
+    ========================= */
+
+    @Column(name = "agree_privacy", nullable = false)
+    private Boolean agreePrivacy;
+
+    @Column(name = "agree_marketing", nullable = false)
+    private Boolean agreeMarketing;
+
+    /* =========================
+       상태 / 시간
+    ========================= */
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20, nullable = false)
+    private ProposalStatus status;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    /* =========================
+       라이프사이클
+    ========================= */
+
+    @PrePersist
+    public void prePersist() {
+        if (status == null) {
+            status = ProposalStatus.Draft;
+        }
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }
