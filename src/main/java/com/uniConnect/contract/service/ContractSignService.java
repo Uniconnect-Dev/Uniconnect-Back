@@ -39,6 +39,10 @@ public class ContractSignService {
             throw new CustomException(ErrorCode.CONTRACT_ALREADY_SIGNED);
         }
 
+        if (!Boolean.TRUE.equals(contract.getCompanySigned())) {
+            throw new CustomException(ErrorCode.COMPANY_SIGNATURE_REQUIRED);
+        }
+
         // 전자서명 검증 및 해시 저장
         signatureService.saveSignature(
                 SignatureRequest.builder()
@@ -70,6 +74,10 @@ public class ContractSignService {
 
         if (Boolean.TRUE.equals(contract.getCompanySigned())) {
             throw new CustomException(ErrorCode.CONTRACT_ALREADY_SIGNED);
+        }
+
+        if (contract.getStatus() != ContractStatus.PendingSignature) {
+            throw new CustomException(ErrorCode.INVALID_CONTRACT_STATUS);
         }
 
         signatureService.saveSignature(

@@ -15,16 +15,16 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/contracts")
 @RequiredArgsConstructor
-@Tag(name = "Contract API", description = "계약서 조회 및 서명 API")
+@Tag(name = "Contract API", description = "(학생단체용)계약서 조회 및 서명 API")
 public class ContractController {
 
     private final ContractService contractService;
 
-    @Operation(summary = "내 계약 목록 조회")
+    @Operation(summary = "내 학생단체 계약 목록 조회")
     @GetMapping
     public ResponseEntity<ApiResponse<List<ContractListItemDto>>> getMyContracts() {
         List<ContractListItemDto> contracts = contractService.getMyContracts();
-        return ResponseEntity.ok(ApiResponse.success("내 계약 목록 조회 성공", contracts));
+        return ResponseEntity.ok(ApiResponse.success("내 학생단체 계약 목록 조회 성공", contracts));
     }
 
     @Operation(summary = "계약 상세 조회")
@@ -34,21 +34,32 @@ public class ContractController {
         return ResponseEntity.ok(ApiResponse.success("계약 상세 조회 성공", contract));
     }
 
-    @Operation(summary = "계약서 서명 제출")
-    @PostMapping("/{contractId}/sign")
-    public ResponseEntity<ApiResponse<ContractSignResponseDto>> signContract(
-            @PathVariable Long contractId,
-            @RequestBody ContractSignRequestDto requestDto
-    ) {
-        ContractSignResponseDto result = contractService.signContract(contractId, requestDto);
-        return ResponseEntity.ok(ApiResponse.success("계약서 서명 완료", result));
-    }
+//    @Operation(summary = "계약서 서명 제출")
+//    @PostMapping("/{contractId}/sign")
+//    public ResponseEntity<ApiResponse<ContractSignResponseDto>> signContract(
+//            @PathVariable Long contractId,
+//            @RequestBody ContractSignRequestDto requestDto
+//    ) {
+//        ContractSignResponseDto result = contractService.signContract(contractId, requestDto);
+//        return ResponseEntity.ok(ApiResponse.success("계약서 서명 완료", result));
+//    }
 
     @Operation(summary = "계약서 PDF 조회")
     @GetMapping("/{contractId}/pdf")
     public ResponseEntity<ApiResponse<ContractPdfResponseDto>> getContractPdf(@PathVariable Long contractId) {
         ContractPdfResponseDto pdf = contractService.getContractPdf(contractId);
         return ResponseEntity.ok(ApiResponse.success("계약서 PDF 조회 성공", pdf));
+    }
+
+    @GetMapping("/{contractId}/pdf/download")
+    @Operation(summary = "계약서 PDF 다운로드")
+    public ApiResponse<ContractPdfDownloadResponse> downloadContractPdf(
+            @PathVariable Long contractId
+    ) {
+        return ApiResponse.success(
+                "계약서 PDF 다운로드 URL 생성 성공",
+                contractService.getDownloadUrl(contractId)
+        );
     }
 
     @Operation(summary = "인수증 조회")
