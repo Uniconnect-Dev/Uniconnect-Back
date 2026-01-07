@@ -24,6 +24,8 @@ public enum ErrorCode {
     CONTRACT_NOT_SIGNED_YET(HttpStatus.BAD_REQUEST, "계약서 서명이 먼저 필요합니다."),
     RECEIPT_ALREADY_SIGNED(HttpStatus.BAD_REQUEST, "이미 인수증 서명이 완료되었습니다."),
     INVALID_RECEIPT_STATUS(HttpStatus.BAD_REQUEST, "현재 상태에서는 인수증 서명을 할 수 없습니다."),
+    COMPANY_SIGNATURE_REQUIRED(HttpStatus.BAD_REQUEST, "기업 서명이 먼저 필요합니다."),
+    INVALID_CONTRACT_STATUS(HttpStatus.BAD_REQUEST, "계약 상태가 올바르지 않습니다."),
 
 
     // 리소스 관련
@@ -53,6 +55,7 @@ public enum ErrorCode {
 
     // 리포트 관련
     INVALID_CAMPAIGN_STATE(HttpStatus.BAD_REQUEST, "캠페인이 리포트 업로드 대기 상태가 아닙니다."),
+    COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "기업 정보를 찾을 수 없습니다."),
 
     // 인증/인가 관련
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),

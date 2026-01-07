@@ -143,7 +143,7 @@ public class CollaborationDashboardService {
 
         receiptRepository.save(receipt);
 
-        collab.setStatus(CollaborationStatus.WaitingReportUpload);
+        collab.setStatus(CollaborationStatus.WaitingReceiptApproval);
 
         upsertTask(collab, TaskType.Receipt, TaskStatus.InProgress, "StudentOrg", null);
 
@@ -203,6 +203,44 @@ public class CollaborationDashboardService {
     }
 
     /* ================= (5) 인수증 승인 ================= */
+
+    @Transactional
+    public ReceiptResponse approveReceiptByAdmin(
+            Long collaborationId,
+            String role   // 컨트롤러에서 JWT role 전달
+    ) {
+        if (!"Admin".equals(role)) {
+            throw new AccessDeniedException("어드민 권한이 필요합니다.");
+        }
+
+        Collaboration collab = collaborationRepository.findById(collaborationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
+
+        ReceiptConfirmation receipt = receiptRepository
+                .findTopByCollaborationOrderBySubmittedAtDesc(collab)
+                .orElseThrow(() -> new CustomException(ErrorCode.ENTITY_NOT_FOUND));
+
+        if (receipt.getStatus() != ReceiptStatus.WaitingApproval) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        receipt.setStatus(ReceiptStatus.Approved);
+        receipt.setApprovedAt(LocalDateTime.now());
+
+        receiptRepository.save(receipt);
+
+        collab.setStatus(CollaborationStatus.WaitingReportUpload);
+
+        upsertTask(
+                collab,
+                TaskType.Receipt,
+                TaskStatus.Done,
+                "Admin",
+                null
+        );
+
+        return ReceiptResponse.from(receipt);
+    }
 
     public ReceiptResponse approveReceipt(Long collaborationId, Long userId) {
         Collaboration collab = getCollab(collaborationId);
