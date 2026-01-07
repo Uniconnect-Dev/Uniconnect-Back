@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface SurveyResponseRepository extends JpaRepository<SurveyResponse, Long> {
     List<SurveyResponse> findBySurvey(Survey survey);
+    List<SurveyResponse> findBySurveyIn(List<Survey> surveys);
+
 }
