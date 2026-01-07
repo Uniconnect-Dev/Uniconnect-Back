@@ -1,4 +1,4 @@
-package com.uniConnect.invoice.entity;
+package com.uniConnect.payment.enums;
 
 public enum InvoiceType {
     TaxInvoice,
