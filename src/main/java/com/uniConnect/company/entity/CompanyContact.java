@@ -24,6 +24,9 @@ public class CompanyContact {
     @Column(name = "email", length = 120)
     private String email;
 
+    @Column(name = "address", length = 120)
+    private String address;
+
     @Column(name = "is_main")
     private Boolean isMain;
 
