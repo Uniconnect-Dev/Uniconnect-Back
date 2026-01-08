@@ -15,7 +15,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     // 상태별 결제 조회
     List<Payment> findByCompanyCompanyIdAndStatus(Long companyId, PaymentStatus status);
-
     List<Payment> findByStudentOrgStudentOrgIdAndStatus(Long studentOrgId, PaymentStatus status);
 
 

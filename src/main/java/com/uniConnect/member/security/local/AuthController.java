@@ -93,4 +93,10 @@ public class AuthController {
     public ResponseEntity<AuthDto.SignUpResp> signup(@Valid @RequestBody AuthDto.SignUpReq request) {
         return ResponseEntity.ok(authService.signup(request));
     }
+
+    @Operation(summary = "회원가입(이메일 비인증)")
+    @PostMapping("/signupWithoutEmail")
+    public ResponseEntity<AuthDto.SignUpResp> signupWithoutEmail(@Valid @RequestBody AuthDto.SignUpReqWithoutEmail request) {
+        return ResponseEntity.ok(authService.signupWithoutEmail(request));
+    }
 }

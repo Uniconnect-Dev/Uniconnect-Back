@@ -1,5 +1,7 @@
 package com.uniConnect.payment.service;
 
+import com.uniConnect.company.entity.CompanyContact;
+import com.uniConnect.company.repository.CompanyContactRepository;
 import com.uniConnect.global.exception.CustomException;
 import com.uniConnect.global.exception.ErrorCode;
 import com.uniConnect.matching.entity.CollaborationMatchRequest;
@@ -11,10 +13,10 @@ import com.uniConnect.payment.entity.Payment;
 import com.uniConnect.payment.entity.PaymentMethod;
 import com.uniConnect.payment.enums.PaymentStatus;
 import com.uniConnect.payment.repository.*;
-import com.uniConnect.campaign.repository.CampaignRepository;
-import com.uniConnect.campaign.entity.Campaign;
 import com.uniConnect.company.repository.CompanyRepository;
 import com.uniConnect.company.entity.Company;
+import com.uniConnect.shop.entity.Product;
+import com.uniConnect.shop.repository.ProductRepository;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import com.uniConnect.studentOrg.repository.StudentOrgRepository;
 import lombok.*;
@@ -34,12 +36,14 @@ import java.util.stream.Collectors;
 public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentMethodRepository paymentMethodRepository;
-    private final CampaignRepository campaignRepository;
+    private final ProductRepository productRepository;
     private final CompanyRepository companyRepository;
+    private final CompanyContactRepository companyContactRepository;
     private final StudentOrgRepository studentOrgRepository;
     private final DummyPgGatewayAdapter pgGatewayAdapter;
     private final PaymentNotificationServiceImpl notificationService;
     private final CollaborationMatchRequestRepository collaborationMatchRequestRepository;
+    private final InvoiceRequestService invoiceRequestService;
 
     /**
      * 1. 기업의 모든 결제 내역 조회
@@ -75,82 +79,42 @@ public class PaymentService {
     /**
      * 2. 결제 진행 (CollabMatchReq 결제)
      */
-    //바뀌는 로직부분만 분리
-    public PaymentDto.PaymentListResponse createPayment(Long companyId, PaymentDto.PaymentCreateRequest request) {
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-
-        return processPaymentByMatchRequest(company, null, request);
-    }
-    public PaymentDto.PaymentListResponse createPaymentByStudentOrg(Long studentOrgId, PaymentDto.PaymentCreateRequest request) {
-        StudentOrg studentOrg = studentOrgRepository.findById(studentOrgId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-
-        return processPaymentByMatchRequest(null, studentOrg, request);
-    }
-
-    //null값으로 method overload
-    private PaymentDto.PaymentListResponse processPaymentByMatchRequest(
-            Company company,
-            StudentOrg studentOrg,
-            PaymentDto.PaymentCreateRequest request) {
-
-        // 1) CollaborationMatchRequest 조회
+    //초기: company, studentOrg 나눠관리
+    public PaymentDto.PaymentListResponse createPayment(PaymentDto.PaymentCreateRequest request) {
+        // 1) 조회
         CollaborationMatchRequest matchRequest= collaborationMatchRequestRepository
                 .findById(request.getCollaborationMatchRequestId())
-                .orElseThrow(()-> new CustomException(ErrorCode.NOT_FOUND));
+                .orElseThrow(()->new CustomException(ErrorCode.NOT_FOUND));
 
         // 2) 권한 확인
-        if (company != null) {
-            if (!matchRequest.getCompany().getCompanyId().equals(company.getCompanyId())) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED);
-            }
-            log.info("[결제 진행] Company ID: {}, MatchRequest ID: {}", company.getCompanyId(), matchRequest.getId());
-        } else {
-            if (!matchRequest.getStudentOrg().getStudentOrgId().equals(studentOrg.getStudentOrgId())) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED);
-            }
-            log.info("[결제 진행] StudentOrg ID: {}, MatchRequest ID: {}", studentOrg.getStudentOrgId(), matchRequest.getId());
-        }
+        validateMatchRequestPermission(matchRequest, request.getRequesterId(), request.getRequesterType());
 
-        // 3) 결제 수단 조회
+        // 3) 결제 수단 조회, 권한 확인
         PaymentMethod method = paymentMethodRepository.findById(request.getPaymentMethodId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-        // 4) 결제 수단 권한 확인
-        if (company != null && !method.getCompany().getCompanyId().equals(company.getCompanyId())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
-        if (studentOrg != null && !method.getStudentOrg().getStudentOrgId().equals(studentOrg.getStudentOrgId())) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
+        validatePaymentMethodPermission(method, matchRequest);
 
-//        // 5) 금액 검증
-//        Long matchRequestAmount = matchRequest.getExpectedCost();  // CollaborationMatchRequest의 예상 비용
-//        if (!request.getAmount().equals(matchRequestAmount)) {
-//            throw new CustomException(ErrorCode.INVALID_AMOUNT);
-//        }
-
-        // 6) Payment 엔티티 생성
+        // 4) Payment 엔티티 생성
         Payment payment = Payment.builder()
-                .company(company)
-                .studentOrg(studentOrg)
+                .company(matchRequest.getCompany())
+                .studentOrg(matchRequest.getStudentOrg())
                 .collaborationMatchRequest(matchRequest)
-                .amount(request.getAmount().intValue())
+                .amount(request.getAmount())
                 .method(method)
                 .status(PaymentStatus.PROCESSING)
                 .build();
         paymentRepository.save(payment);
 
         try {
-            // 7) PG사에 결제 요청
+            // 5) PG사에 결제 요청
             String transactionId = pgGatewayAdapter.processPayment(
                     payment.getPaymentId(),
                     request.getAmount(),
                     method
             );
 
-            // 8) 결제 성공 업데이트
+            // 6) 결제 성공 업데이트
             payment.setStatus(PaymentStatus.SUCCESS);
             payment.setTransactionId(transactionId);
             payment.setCompletedAt(LocalDateTime.now());
@@ -158,12 +122,12 @@ public class PaymentService {
 
             log.info("[결제 성공] Payment ID: {}, TransactionId: {}", payment.getPaymentId(), transactionId);
 
-            // 9) 알림 발송
+            // 7) 알림 발송
             notificationService.notifyPaymentSuccess(payment);
 
-//            // 10) 세금계산서/영수증 자동 발행
-//            issueInvoiceAfterPayment(payment);
-//
+            // 8) 세금계산서/영수증 자동 발행
+            issueInvoiceAfterPayment(payment);
+
             return convertToPaymentListResponse(payment);
 
         } catch (Exception e) {
@@ -176,68 +140,302 @@ public class PaymentService {
         }
     }
 
-//    private void issueInvoiceAfterPayment(Payment payment) {
-//        try {
-//            CollaborationMatchRequest matchRequest = payment.getCollaborationMatchRequest();
-//
-//            // Invoice 생성
-//            Invoice invoice = Invoice.builder()
-//                    .issueType(InvoiceIssueType.Tax)  // 기본값: 세금계산서
-//                    .status(InvoiceStatus.PENDING)
-//                    .amount(payment.getAmount().longValue())
-//                    .taxAmount(payment.getAmount() / 10L)  // 10% 세액
-//                    .companyName(matchRequest.getCompany().getName())
-//                    .representativeName(matchRequest.getCompany().getName())  // 필요시 조회
-//                    .address(matchRequest.getCompany().getName())
-//                    .bizType("협업")
-//                    .bizItem(matchRequest.getProposalContent() != null ? matchRequest.getProposalContent().substring(0, 50) : "협업")
-//                    .email(matchRequest.getCompany().getName())
-//                    .payment(payment)
-//                    .company(payment.getCompany())
-//                    .studentOrg(payment.getStudentOrg())
-//                    .build();
-//
-//            invoiceRepository.save(invoice);
-//
-//            log.info("✅ Invoice 자동 생성: Payment ID = {}, Invoice ID = {}",
-//                    payment.getPaymentId(), invoice.getInvoiceId());
-//
-//        } catch (Exception e) {
-//            log.error("❌ Invoice 자동 생성 실패: {}", e.getMessage(), e);
-//            // Invoice 생성 실패는 결제 롤백하지 않음
-//        }
-//    }
+    /**
+     * 권한 확인: 결제 요청자가 CollabMatchReq에 속하는지 확인, 결제 수단 권한 확인
+     */
+    private void validateMatchRequestPermission(CollaborationMatchRequest matchRequest, Long requesterId, String requesterType) {
+        if ("COMPANY".equalsIgnoreCase(requesterType)) {
+            if (!matchRequest.getCompany().getCompanyId().equals(requesterId)) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+        }
+        else if ("STUDENT_ORG".equalsIgnoreCase(requesterType) || "STUDENTORG".equalsIgnoreCase(requesterType)) {
+            if (!matchRequest.getStudentOrg().getStudentOrgId().equals(requesterId)) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+        }
+        else throw new CustomException(ErrorCode.UNAUTHORIZED);
+    }
+
+    private void validatePaymentMethodPermission(PaymentMethod method, CollaborationMatchRequest matchRequest) {
+        Company company = matchRequest.getCompany();
+        StudentOrg studentOrg = matchRequest.getStudentOrg();
+
+        if (company != null && method.getCompany() != null) {
+            if (!method.getCompany().getCompanyId().equals(company.getCompanyId())) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+        } else if (studentOrg != null && method.getStudentOrg() != null) {
+            if (!method.getStudentOrg().getStudentOrgId().equals(studentOrg.getStudentOrgId())) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+        } else {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
+    /**
+     * InvoiceRequest 자동 생성 (결제 성공 후)
+     */
+    private void issueInvoiceAfterPayment(Payment payment) {
+        try {
+            CompanyContact companycontact = companyContactRepository.findMainContactByCompany(payment.getCompany(), payment.getCompany().getMainContactId())
+                    .orElseThrow(()->new CustomException(ErrorCode.NOT_FOUND));
+            Company company = payment.getCompany();
+            StudentOrg studentOrg = payment.getStudentOrg();
+            PaymentMethod method = payment.getMethod();
+            Long userId = company != null ? company.getCompanyId(): studentOrg.getStudentOrgId();
+
+            // 부가세 계산 (10%)
+            Long taxAmount = (long) (payment.getAmount() * 0.1);
+
+            PaymentDto.InvoiceCreateRequest dto = PaymentDto.InvoiceCreateRequest.builder()
+                    .paymentId(payment.getPaymentId())
+                    .paymentDateTime(payment.getCompletedAt())
+                    .paymentMethod(method.getType())
+                    .customerName(company != null ? company.getBrandName() : studentOrg.getSchoolName())
+                    .email(company != null ? companycontact.getEmail() : studentOrg.getEmail())
+                    .phone(company != null ? companycontact.getPhone() : studentOrg.getPhone())
+                    .cardNumber(maskingCardNumber(method))  // 카드번호 마스킹
+                    .approvalNumber(payment.getTransactionId())  // 승인번호
+                    .originalAmount(payment.getAmount().longValue())  // 최초금액
+                    .discountAmount(0L)  // 할인 (기본값 0)
+                    .taxAmount(taxAmount)  // 부가세 (10%)
+                    .partnershipFee(0L)  // 제휴수수료 (기본값 0)
+                    .additionalMarketing(0L)  // 추가마케팅 (기본값 0)
+                    .totalAmount(payment.getAmount().longValue())  // 총결제금액
+                    .netAmount(payment.getAmount().longValue())  // 순수금액
+                    .bizNumber("")  // Business Registration에서 조회 필요
+                    .companyName(company != null ? company.getBrandName() : studentOrg.getSchoolName())
+                    .representativeName(company != null ? company.getBrandName() : studentOrg.getSchoolName())
+                    .bizType("협업")
+                    .bizItem("마케팅 협업")
+                    .userId(userId)
+                    .build();
+
+            invoiceRequestService.createInvoiceRequestFromPayment(dto);
+
+            log.info("✅ InvoiceRequest 생성 완료: PaymentId={}, InvoiceRequestUserId={}",
+                    payment.getPaymentId(), userId);
+
+        } catch (Exception e) {
+            log.error("❌ InvoiceRequest 생성 실패: {}", e.getMessage(), e);
+            // InvoiceRequest 생성 실패는 결제 롤백하지 않음
+        }
+    }
+
+    private String maskingCardNumber(PaymentMethod method) {
+        try {
+            String cardNumber = method.getCardNumberEnc();
+            if (cardNumber != null && cardNumber.length() >= 4) {
+                return "**** **** **** " + cardNumber.substring(cardNumber.length() - 4);
+            }
+            return "****";
+        } catch (Exception e) {
+            return "****";
+        }
+    }
+
+    /**
+     * Product 결제 진행 (StudentOrg 기반)
+     */
+    public PaymentDto.ProductPaymentResponse createProductPayment(
+            Long studentOrgId,
+            PaymentDto.ProductPaymentCreateRequest request) {
+
+        // 1) StudentOrg 존재 확인
+        StudentOrg studentOrg = studentOrgRepository.findById(studentOrgId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        // 2) Product 조회
+        Product product = productRepository.findByIdWithCompany(request.getProductId())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        // 3) 결제 수단 조회 및 권한 확인 (StudentOrg 결제 수단만 사용 가능)
+        PaymentMethod method = paymentMethodRepository.findById(request.getPaymentMethodId())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        if (method.getStudentOrg() == null || !method.getStudentOrg().getStudentOrgId().equals(studentOrgId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 4) 총 결제 금액 계산
+        Integer unitPrice = product.getPrice();
+        Integer totalAmount = unitPrice * request.getQuantity();
+
+        // 5) Payment 엔티티 생성 (StudentOrg 구매)
+        Payment payment = Payment.builder()
+                .studentOrg(studentOrg)
+                .product(product)
+                .amount(totalAmount)
+                .method(method)
+                .status(PaymentStatus.PROCESSING)
+                .build();
+        paymentRepository.save(payment);
+
+        try {
+            // 6) PG사에 결제 요청
+            String transactionId = pgGatewayAdapter.processPayment(
+                    payment.getPaymentId(),
+                    totalAmount,
+                    method
+            );
+
+            // 7) 결제 성공 업데이트
+            payment.setStatus(PaymentStatus.SUCCESS);
+            payment.setTransactionId(transactionId);
+            payment.setCompletedAt(LocalDateTime.now());
+            paymentRepository.save(payment);
+
+            log.info("[Product 결제 성공] PaymentId={}, StudentOrgId={}, ProductId={}, Quantity={}, Amount={}",
+                    payment.getPaymentId(), studentOrgId, product.getProductId(), request.getQuantity(), totalAmount);
+
+            // 8) 알림 발송
+            notificationService.notifyPaymentSuccess(payment);
+
+            return convertToProductPaymentResponse(payment, product, request.getQuantity());
+
+        } catch (Exception e) {
+            payment.setStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+
+            log.error("[Product 결제 실패] PaymentId={}, StudentOrgId={}, Error={}",
+                    payment.getPaymentId(), studentOrgId, e.getMessage(), e);
+            notificationService.notifyPaymentFailed(payment);
+            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+        }
+    }
+
+    /**
+     * Product 결제 취소 (StudentOrg 기반)
+     */
+    public void cancelProductPayment(Long paymentId, Long studentOrgId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        // Product 결제인지 확인
+        if (payment.getProduct() == null) {
+            throw new CustomException(ErrorCode.INVALID_PAYMENT_STATUS);
+        }
+
+        // StudentOrg 소유권 확인
+        if (payment.getStudentOrg() == null || !payment.getStudentOrg().getStudentOrgId().equals(studentOrgId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        if (payment.getStatus() != PaymentStatus.PROCESSING) {
+            throw new CustomException(ErrorCode.INVALID_PAYMENT_STATUS);
+        }
+
+        payment.setStatus(PaymentStatus.CANCELED);
+        payment.setCanceledAt(LocalDateTime.now());
+        paymentRepository.save(payment);
+
+        log.info("[Product 결제 취소] PaymentId={}, StudentOrgId={}, ProductId={}",
+                payment.getPaymentId(), studentOrgId, payment.getProduct().getProductId());
+        notificationService.notifyPaymentFailed(payment);
+    }
+
+    /**
+     * Product 결제 재시도 (StudentOrg 기반)
+     */
+    public PaymentDto.ProductPaymentResponse retryProductPayment(Long paymentId, Long studentOrgId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        // Product 결제인지 확인
+        if (payment.getProduct() == null) {
+            throw new CustomException(ErrorCode.INVALID_PAYMENT_STATUS);
+        }
+
+        // StudentOrg 소유권 확인
+        if (payment.getStudentOrg() == null || !payment.getStudentOrg().getStudentOrgId().equals(studentOrgId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        if (payment.getStatus() != PaymentStatus.FAILED) {
+            throw new CustomException(ErrorCode.INVALID_PAYMENT_STATUS);
+        }
+
+        payment.setStatus(PaymentStatus.PROCESSING);
+        paymentRepository.save(payment);
+
+        log.info("[Product 결제 재시도] PaymentId={}, StudentOrgId={}", payment.getPaymentId(), studentOrgId);
+
+        try {
+            String transactionId = pgGatewayAdapter.processPayment(
+                    payment.getPaymentId(),
+                    payment.getAmount(),
+                    payment.getMethod()
+            );
+
+            payment.setStatus(PaymentStatus.SUCCESS);
+            payment.setTransactionId(transactionId);
+            payment.setCompletedAt(LocalDateTime.now());
+            paymentRepository.save(payment);
+
+            log.info("[Product 결제 재시도 성공] PaymentId={}, StudentOrgId={}",
+                    payment.getPaymentId(), studentOrgId);
+            notificationService.notifyPaymentSuccess(payment);
+
+            Integer quantity = payment.getAmount() / payment.getProduct().getPrice();
+            return convertToProductPaymentResponse(payment, payment.getProduct(), quantity);
+
+        } catch (Exception e) {
+            payment.setStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            log.error("[Product 결제 재시도 실패] PaymentId={}, Error={}", payment.getPaymentId(), e.getMessage(), e);
+            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+        }
+    }
+
+    /**
+     * DTO 변환: Product 결제 응답
+     */
+    private PaymentDto.ProductPaymentResponse convertToProductPaymentResponse(
+            Payment payment, Product product, Integer quantity) {
+
+        return PaymentDto.ProductPaymentResponse.builder()
+                .paymentId(payment.getPaymentId())
+                .productId(product.getProductId())
+                .productName(product.getName())
+                .unitPrice(product.getPrice())
+                .quantity(quantity)
+                .totalAmount(payment.getAmount())
+                .status(payment.getStatus())
+                .transactionId(payment.getTransactionId())
+                .createdAt(payment.getCreatedAt())
+                .completedAt(payment.getCompletedAt())
+                .build();
+    }
+
+    /**
+     * 결제 소유권 검증 (Payment 객체 기반)
+     */
+    private void validatePaymentOwnership(Payment payment, Long requesterId) {
+        if (payment.getCompany() != null) {
+            if (!payment.getCompany().getCompanyId().equals(requesterId)) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+        } else if (payment.getStudentOrg() != null) {
+            if (!payment.getStudentOrg().getStudentOrgId().equals(requesterId)) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+        } else {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+    }
 
     /**
      * 3. 결제 취소 (PROCESSING 상태에서만 가능)
      */
-    public void cancelPayment(Long paymentId, Long companyId) {
+    public void cancelPayment(Long paymentId, Long requesterId, String requesterType) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-        if (!payment.getCompany().getCompanyId().equals(companyId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
+        validatePaymentOwnership(payment, requesterId, requesterType);
 
-        performCancelPayment(payment);
-    }
-
-    public void cancelPaymentByStudentOrg(Long paymentId, Long studentOrgId) {
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-
-        if (!payment.getStudentOrg().getStudentOrgId().equals(studentOrgId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
-
-        performCancelPayment(payment);
-    }
-
-    /**
-     * 공통 결제 취소 로직
-     */
-    private void performCancelPayment(Payment payment) {
-        if (payment.getStatus() != PaymentStatus.PROCESSING) {
+        if (payment.getStatus() != PaymentStatus.PROCESSING) { //processing일때만
             throw new CustomException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
 
@@ -249,36 +447,30 @@ public class PaymentService {
         notificationService.notifyPaymentFailed(payment);
     }
 
+    private static void validatePaymentOwnership(Payment payment, Long requesterId, String requesterType) {
+        if ("COMPANY".equalsIgnoreCase(requesterType)) {
+            if (payment.getCompany() == null || !payment.getCompany().getCompanyId().equals(requesterId)) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+        } else if ("STUDENT_ORG".equalsIgnoreCase(requesterType) || "STUDENTORG".equalsIgnoreCase(requesterType)) {
+            if (payment.getStudentOrg() == null || !payment.getStudentOrg().getStudentOrgId().equals(requesterId)) {
+                throw new CustomException(ErrorCode.UNAUTHORIZED);
+            }
+        } else {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+    }
+
 
     /**
-     * 6. 결제 재시도 (FAILED 상태에서만 가능)
+     * 4. 결제 재시도 (FAILED 상태에서만 가능)
      */
-    public PaymentDto.PaymentListResponse retryPayment(Long paymentId, Long companyId) {
+    public PaymentDto.PaymentListResponse retryPayment(Long paymentId, Long requesterId, String requesterType) {
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-        if (!payment.getCompany().getCompanyId().equals(companyId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
+        validatePaymentOwnership(payment, requesterId, requesterType);
 
-        return performRetryPayment(payment);
-    }
-
-    public PaymentDto.PaymentListResponse retryPaymentByStudentOrg(Long paymentId, Long studentOrgId) {
-        Payment payment = paymentRepository.findById(paymentId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
-
-        if (!payment.getStudentOrg().getStudentOrgId().equals(studentOrgId)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
-
-        return performRetryPayment(payment);
-    }
-
-    /**
-     * 공통 결제 재시도 로직
-     */
-    private PaymentDto.PaymentListResponse performRetryPayment(Payment payment) {
         if (payment.getStatus() != PaymentStatus.FAILED) {
             throw new CustomException(ErrorCode.INVALID_PAYMENT_STATUS);
         }
@@ -314,7 +506,55 @@ public class PaymentService {
     }
 
     /**
-     * 7. DTO 변환 헬퍼 메서드
+     * 5. 세금계산서/영수증 발행 요청
+     */
+    public PaymentDto.InvoiceResponse requestInvoiceIssue(
+            Long paymentId,
+            Long requesterId,
+            String requesterType,
+            PaymentDto.InvoiceRequestCreateRequest request) {
+
+        // Payment 존재 및 권한 확인
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+        validatePaymentOwnership(payment, requesterId, requesterType);
+
+        // InvoiceRequest 생성
+        return invoiceRequestService.requestInvoiceIssue(paymentId, request);
+    }
+
+    /**
+     * Payment ID, 일반, user list로 조회
+     */
+    @Transactional(readOnly = true)
+    public PaymentDto.InvoiceResponse getInvoiceRequestByPaymentId(Long paymentId) {
+        Payment payment = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        // 권한 검증: 결제 소유자만 조회 가능
+        return invoiceRequestService.getInvoiceRequestByPaymentId(paymentId);
+    }
+
+    @Transactional(readOnly = true)
+    public PaymentDto.InvoiceResponse getInvoiceRequest(Long invoiceRequestId, Long requesterId, String requesterType) {
+        PaymentDto.InvoiceResponse invoice = invoiceRequestService.getInvoiceRequest(invoiceRequestId);
+
+        // 권한 검증: 요청자=해당 결제자?
+        Payment payment = paymentRepository.findById(invoice.getPaymentId())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+        validatePaymentOwnership(payment, requesterId, requesterType);
+
+        return invoice;
+    }
+
+    @Transactional(readOnly = true)
+    public List<PaymentDto.InvoiceResponse> getInvoiceRequests(Long requesterId, String requesterType) {
+        return invoiceRequestService.getInvoiceRequestsByUserId(requesterId);
+    }
+
+
+    /**
+     * DTO 변환 헬퍼 메서드
      */
     private PaymentDto.PaymentListResponse convertToPaymentListResponse(Payment payment) {
         CollaborationMatchRequest matchRequest = payment.getCollaborationMatchRequest();
@@ -333,7 +573,7 @@ public class PaymentService {
                         .paymentMethodType(methodType);
 
         // CollaborationMatchRequest 정보 추가
-        builder.matchRequestId(matchRequest.getId() != null ? matchRequest.getId() : null)
+        builder.matchRequestId(matchRequest.getId())
                 .matchRequestType(matchRequest.getCollaborationType() != null
                         ? matchRequest.getCollaborationType().toString() : "N/A");
 

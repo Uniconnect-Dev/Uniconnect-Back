@@ -1,4 +1,4 @@
-package com.uniConnect.invoice.swagger;
+package com.uniConnect.payment.swagger;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;

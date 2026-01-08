@@ -1,11 +1,8 @@
 package com.uniConnect.payment.dto;
 
-import com.uniConnect.invoice.entity.InvoiceStatus;
-import com.uniConnect.invoice.entity.InvoiceType;
+import com.uniConnect.payment.enums.InvoiceStatus;
 import com.uniConnect.payment.enums.*;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -85,7 +82,48 @@ public class PaymentDto {
         @NotNull
         private Long paymentMethodId;  // 결제 수단 ID
 
+        @NotNull(message= "요청자 ID는 필수입니다") //구매자 기준
+        private Long requesterId;
+
+        @NotNull(message= "요청자 type은 필수입니다")
+        private String requesterType; //"COMPANY", "STUDENT_ORG"
+
         private String notes;  // 비고
+    }
+
+    /**
+     * Product 결제 요청,응답 DTO: 구매자=학생단체
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProductPaymentCreateRequest {
+        @NotNull(message = "Product ID는 필수입니다")
+        private Long productId;
+
+        @NotNull(message = "수량은 필수입니다")
+        @Min(value = 1, message = "수량은 1 이상이어야 합니다")
+        private Integer quantity;
+
+        @NotNull(message = "결제 수단 ID는 필수입니다")
+        private Long paymentMethodId;
+
+        private String notes;  // 비고
+    }
+
+    @Data
+    @Builder
+    public static class ProductPaymentResponse {
+        private Long paymentId;
+        private Long productId;
+        private String productName;
+        private Integer unitPrice;
+        private Integer quantity;
+        private Integer totalAmount;
+        private PaymentStatus status;
+        private String transactionId;
+        private LocalDateTime createdAt;
+        private LocalDateTime completedAt;
     }
 
     @Data
@@ -107,36 +145,111 @@ public class PaymentDto {
     }
 
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     @Builder
-    public static class PaymentMethodResponse {
-        private Long methodId;
-        private PaymentMethodType type;           // CARD, ACCOUNT, SIMPLE_PAY
-        private String displayInfo;    // 마스킹된 정보 (카드 **** 1234 등)
-        private String holderName;     // 카드 소유자/계좌주
+    public static class InvoiceCreateRequest {
+
+        // === 결제 기본 정보 ===
+        private Long paymentId;
+        private LocalDateTime paymentDateTime;
+        private PaymentMethodType paymentMethod;
+
+        // === 고객 정보 ===
+        private String customerName;
+        private String email;
+        private String phone;
+
+        // === 카드/계좌 정보 ===
+        private String cardNumber;  // 마스킹된 번호
+        private String approvalNumber;
+
+        // === 금액 정보 ===
+        private Long originalAmount;  // 최초금액
+        private Long discountAmount;  // 할인금액 (기본값: 0)
+        private Long taxAmount;  // 부가세 (10%)
+        private Long partnershipFee;  // 제휴수수료
+        private Long additionalMarketing;  // 추가마케팅 (기본값: 0)
+        private Long totalAmount;  // 총결제금액
+        private Long netAmount;  // 순수금액
+
+        // === 사업자 정보 ===
+        private String bizNumber;
+        private String companyName;
+        private String representativeName;
+//        private String address;
+        private String bizType;
+        private String bizItem;
+
+        // === 기타 ===
+        private Long userId;
     }
 
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class InvoiceResponse {
 
+        private Long invoiceRequestId;
+
+        // === 결제 기본 정보 ===
+        private Long paymentId;
+        private LocalDateTime paymentDateTime;
+        private PaymentMethodType paymentMethod;
+
+        // === 고객 정보 ===
+        private String customerName;
+        private String email;
+        private String phone;
+
+        // === 카드/계좌 정보 ===
+        private String cardNumber;
+        private String approvalNumber;
+
+        // === 금액 정보 ===
+        private Long originalAmount;
+        private Long discountAmount;
+        private Long taxAmount;
+        private Long partnershipFee;
+        private Long additionalMarketing;
+        private Long totalAmount;
+        private Long netAmount;
+
+        // === 사업자 정보 ===
+        private String bizNumber;
+        private String companyName;
+        private String representativeName;
+        private String address;
+        private String bizType;
+        private String bizItem;
+
+        // === 상태 ===
+        private InvoiceStatus status;
+        private LocalDateTime createdAt;
+    }
+
+    /**
+     * 사용자 발행 요청 (추가 정보 입력)
+     */
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class InvoiceCreateRequest {
-        @NotNull(message = "결제 ID는 필수입니다")
-        private Long paymentId;
+    @Builder
+    public static class InvoiceRequestCreateRequest {
 
-        @NotNull(message = "사업자등록증 ID는 필수입니다")
-        private Long businessRegistrationId;
+        @NotNull(message = "사업자등록번호는 필수입니다")
+        @Pattern(regexp = "\\d{10}", message = "사업자등록번호는 10자리 숫자여야 합니다")
+        private String bizNumber;
 
-        @NotNull(message = "발행 유형은 필수입니다")
-        private InvoiceIssueType issueType;  // TAX_INVOICE, CASH_RECEIPT
+        @NotBlank(message = "회사명은 필수입니다")
+        private String companyName;
 
+        @NotBlank(message = "대표자명은 필수입니다")
+        private String representativeName;
 
-        @NotNull(message = "금액은 필수입니다")
-        @Positive(message = "금액은 0보다 커야 합니다")
-        private Long amount;
-
-        @NotNull(message = "세액은 필수입니다")
-        @PositiveOrZero(message = "세액은 0 이상이어야 합니다")
-        private Long taxAmount; //세금계산서인 경우
+        @NotBlank(message = "사업장 주소는 필수입니다")
+        private String address;
 
         @NotBlank(message = "업종은 필수입니다")
         private String bizType;
@@ -144,33 +257,26 @@ public class PaymentDto {
         @NotBlank(message = "업태는 필수입니다")
         private String bizItem;
 
-        @Email(message = "유효한 이메일 형식이 아닙니다")
-        private String email;
+        @NotNull(message = "제휴수수료는 필수입니다")
+        @Min(value = 0, message = "제휴수수료는 0 이상이어야 합니다")
+        private Long partnershipFee;
 
-        private String notes;  // 비고
+        @NotNull(message = "추가마케팅은 필수입니다")
+        @Min(value = 0, message = "추가마케팅은 0 이상이어야 합니다")
+        private Long additionalMarketing;
+
+        @NotNull(message = "할인금액은 필수입니다")
+        @Min(value = 0, message = "할인금액은 0 이상이어야 합니다")
+        private Long discountAmount;
     }
 
     @Data
     @Builder
-    public static class InvoiceResponse {
-        private Long invoiceId;
-        private String registrationNo;  // 세금계산서/영수증 번호
-        private InvoiceIssueType issueType;
-        private String status;
-        private Long amount;
-        private Long taxAmount;
-
-        private String companyName;
-        private String representativeName;
-        private String address;
-        private String bizType;
-        private String bizItem;
-        private String email;
-
-        private String businessRegistrationNo;
-        private String taxOfficeConfirmationNumber;  // 국세청 확인 번호
-        private LocalDateTime issuedAt;
-        private LocalDateTime createdAt;
+    public static class PaymentMethodResponse {
+        private Long methodId;
+        private PaymentMethodType type;           // CARD, ACCOUNT, SIMPLE_PAY
+        private String displayInfo;    // 마스킹된 정보 (카드 **** 1234 등)
+        private String holderName;     // 카드 소유자/계좌주
     }
 
     //user가 생성

@@ -230,6 +230,63 @@ public class AuthService {
                 .build();
     }
 
+    public AuthDto.SignUpResp signupWithoutEmail(AuthDto.SignUpReqWithoutEmail request) {
+        // 1) 비밀번호 확인 검증
+        if (!request.getPassword().equals(request.getPasswordConfirm())) {
+            throw new IllegalStateException("비밀번호가 일치하지 않습니다");
+        }
+
+//        // 2) 이메일 인증 검증 (verified=true인지 확인)
+//        EmailVerification verification = emailVerificationRepository.findByEmail(request.getEmail())
+//                .orElseThrow(() -> new IllegalStateException("이메일 인증이 필요합니다"));
+//
+//        if (!Boolean.TRUE.equals(verification.getVerified())) {
+//            throw new IllegalStateException("이메일이 인증되지 않았습니다");
+//        }
+//
+//        // 3) 인증 시간 유효성 확인 (선택: 인증 후 1시간 이내만 가입 허용)
+//        if (LocalDateTime.now().isAfter(verification.getVerifiedAt().plusHours(1))) {
+//            throw new IllegalStateException("인증이 만료되었습니다. 다시 인증해주세요");
+//        }
+
+        // 4) 기존 사용자 확인 (기존 코드)
+        if (usersRepository.findByUsername(request.getUsername()).isPresent()) {
+            throw new IllegalStateException("이미 존재하는 아이디입니다");
+        }
+        if (localCredentialRepository.existsByLoginId(request.getUsername())) {
+            throw new IllegalStateException("이미 존재하는 아이디입니다");
+        }
+
+        // 5) User 생성
+        User user = User.builder()
+                .username(request.getUsername())
+                .password(null)  // 보안: plaintext 저장 ❌
+                .role(request.getUserrole())
+                .status(request.getUserStatus() != null ? request.getUserStatus() : UserStatus.Active)
+                .build();
+        user = usersRepository.save(user);
+
+        // 6) LocalCredential 생성
+        LocalCredential cred = LocalCredential.builder()
+                .user(user)
+                .loginId(request.getUsername())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .build();
+        localCredentialRepository.save(cred);
+
+//        // 7) 인증 레코드 삭제 (또는 used 처리)
+//        emailVerificationRepository.deleteByEmail(request.getEmail());
+
+        log.info("✅ 회원가입 완료: {}", request.getUsername());
+
+        return AuthDto.SignUpResp.builder()
+                .userId(user.getUserId())
+                .username(user.getUsername())
+                .email(request.getEmail())
+                .message("회원가입이 완료되었습니다")
+                .build();
+    }
+
     /**
      * JWT 기반 로그아웃
      * - 실제로는 JWT가 stateless이므로(session 저장x) 서버에서 토큰을 무효화할 수 없음
