@@ -1,0 +1,2 @@
+ALTER TABLE sampling_proposal
+DROP CONSTRAINT sampling_proposal_industry_check;
