@@ -125,6 +125,24 @@ public class CollaborationDashboardController {
         );
     }
 
+    /* ======================
+   학생단체 – 제품 수령 정보 입력
+ ====================== */
+    @Operation(
+            summary = "학생단체 - 제품 수령 정보 입력",
+            description = "학생단체가 제품 수령인과 수령 장소 정보를 입력합니다."
+    )
+    @PostMapping("/student/receive-info")
+    public ApiResponse<StudentReceiveInfoResponse> saveReceiveInfo(
+            @RequestBody StudentReceiveInfoRequest request,
+            @AuthenticationPrincipal CustomUser user
+    ) {
+        return ApiResponse.success(
+                "수령 정보 저장 완료",
+                dashboardService.saveReceiveInfo(request, user.getUserId())
+        );
+    }
+
     // 학생단체 인수증 제출
     @Operation(
             summary = "학생단체 - 인수증 제출",

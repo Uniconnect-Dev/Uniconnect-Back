@@ -77,15 +77,15 @@ public class CollaborationMatchRequest {
     }
 
     public Company getCompany() {
+        if (company != null) return company;
         if (samplingProposal != null) return samplingProposal.getCreator().getCompany();
         if (collaborationProposal != null) return collaborationProposal.getCompany();
         return null;
     }
 
     public StudentOrg getStudentOrg() {
+        if (this.studentOrg != null) return this.studentOrg;
         if (campaign != null) return campaign.getStudentOrg();
-        if (collaborationProposal != null) return this.studentOrg;
         return null;
     }
-
 }

@@ -56,7 +56,13 @@ public class CollaborationDashboardService {
     }
 
     private void validateCompanyOwnership(Collaboration collab, Long userId) {
-        Company company = collab.getMatchRequest().getCompany();
+        CollaborationMatchRequest match = collab.getMatchRequest();
+
+        Company company = match.getCompany();
+
+        if (company == null) {
+            throw new CustomException(ErrorCode.INVALID_STATE);
+        }
 
         boolean isOwner = company.getUsers().stream()
                 .anyMatch(u -> u.getUserId().equals(userId));
@@ -95,17 +101,38 @@ public class CollaborationDashboardService {
 
     /* ================= (1) 수령 정보 ================= */
 
-    public StudentReceiveInfo saveReceiveInfo(StudentReceiveInfoRequest req) {
+    public StudentReceiveInfoResponse saveReceiveInfo(
+            StudentReceiveInfoRequest req,
+            Long userId
+    ) {
         Collaboration collab = getCollab(req.getCollaborationId());
 
-        StudentReceiveInfo info = StudentReceiveInfo.builder()
-                .collaboration(collab)
-                .receiverName(req.getReceiverName())
-                .receivePlace(req.getReceivePlace())
-                .note(req.getNote())
-                .build();
+        // 2. 업서트
+        StudentReceiveInfo info =
+                studentReceiveInfoRepository
+                        .findByCollaboration(collab)
+                        .orElse(
+                                StudentReceiveInfo.builder()
+                                        .collaboration(collab)
+                                        .build()
+                        );
 
-        return studentReceiveInfoRepository.save(info);
+        info.setReceiverName(req.getReceiverName());
+        info.setReceivePlace(req.getReceivePlace());
+        info.setNote(req.getNote());
+
+        studentReceiveInfoRepository.save(info);
+
+        // 3. Task 반영
+        upsertTask(
+                collab,
+                TaskType.ReceiveInfo,
+                TaskStatus.Done,
+                "StudentOrg",
+                null
+        );
+
+        return StudentReceiveInfoResponse.from(info);
     }
 
     /* ================= (2) 인수증 제출 ================= */
