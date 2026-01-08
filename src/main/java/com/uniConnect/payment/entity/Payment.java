@@ -5,6 +5,7 @@ import com.uniConnect.company.entity.Company;
 import com.uniConnect.matching.entity.CollaborationMatchRequest;
 import com.uniConnect.payment.enums.PaymentStatus;
 import com.uniConnect.sampling.entity.SamplingRequest;
+import com.uniConnect.shop.entity.Product;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import jakarta.persistence.*;
 import lombok.*;
@@ -48,13 +49,14 @@ public class Payment {
     private Company company;
 
     //추가
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY) //entity 조회시 연관entity 바로조회x
     @JoinColumn(name = "student_org_id")
     private StudentOrg studentOrg;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "campaign_id")
-//    private Campaign campaign;
+    //추가
+    @ManyToOne(fetch= FetchType.LAZY)
+    @JoinColumn(name="product_id")
+    private Product product;
 
     //추가
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

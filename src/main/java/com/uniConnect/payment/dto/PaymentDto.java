@@ -82,13 +82,48 @@ public class PaymentDto {
         @NotNull
         private Long paymentMethodId;  // 결제 수단 ID
 
-        @NotNull(message= "요청자 ID는 필수입니다")
+        @NotNull(message= "요청자 ID는 필수입니다") //구매자 기준
         private Long requesterId;
 
         @NotNull(message= "요청자 type은 필수입니다")
         private String requesterType; //"COMPANY", "STUDENT_ORG"
 
         private String notes;  // 비고
+    }
+
+    /**
+     * Product 결제 요청,응답 DTO: 구매자=학생단체
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProductPaymentCreateRequest {
+        @NotNull(message = "Product ID는 필수입니다")
+        private Long productId;
+
+        @NotNull(message = "수량은 필수입니다")
+        @Min(value = 1, message = "수량은 1 이상이어야 합니다")
+        private Integer quantity;
+
+        @NotNull(message = "결제 수단 ID는 필수입니다")
+        private Long paymentMethodId;
+
+        private String notes;  // 비고
+    }
+
+    @Data
+    @Builder
+    public static class ProductPaymentResponse {
+        private Long paymentId;
+        private Long productId;
+        private String productName;
+        private Integer unitPrice;
+        private Integer quantity;
+        private Integer totalAmount;
+        private PaymentStatus status;
+        private String transactionId;
+        private LocalDateTime createdAt;
+        private LocalDateTime completedAt;
     }
 
     @Data

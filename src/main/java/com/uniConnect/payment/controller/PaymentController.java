@@ -166,9 +166,6 @@ public class PaymentController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * 결제 재시도
-     */
     @PostMapping("/retry/{paymentId}")
     @Operation(summary = "결제 재시도")
     public ResponseEntity<PaymentDto.PaymentListResponse> retryPayment(
@@ -181,6 +178,39 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.retryPayment(paymentId, requesterId, requesterType));
     }
 
+    @PostMapping("/products")
+    @Operation(summary = "Product 결제 진행 (학생단체)")
+    public ResponseEntity<PaymentDto.ProductPaymentResponse> createProductPayment(
+            @Parameter(description = "학생단체 ID", example = "1")
+            @RequestParam Long studentOrgId,
+            @Valid @RequestBody PaymentDto.ProductPaymentCreateRequest request) {
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(paymentService.createProductPayment(studentOrgId, request));
+    }
+
+    @PostMapping("/products/cancel/{paymentId}")
+    @Operation(summary = "Product 결제 취소")
+    public ResponseEntity<Void> cancelProductPayment(
+            @Parameter(description = "결제 ID", example = "1")
+            @PathVariable Long paymentId,
+            @Parameter(description = "학생단체 ID", example = "1")
+            @RequestParam Long studentOrgId) {
+
+        paymentService.cancelProductPayment(paymentId, studentOrgId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/products/retry/{paymentId}")
+    @Operation(summary = "Product 결제 재시도")
+    public ResponseEntity<PaymentDto.ProductPaymentResponse> retryProductPayment(
+            @Parameter(description = "결제 ID", example = "1")
+            @PathVariable Long paymentId,
+            @Parameter(description = "학생단체 ID", example = "1")
+            @RequestParam Long studentOrgId) {
+
+        return ResponseEntity.ok(paymentService.retryProductPayment(paymentId, studentOrgId));
+    }
 
 //     ===== 4. 세금계산서/영수증 발행 =====
 
