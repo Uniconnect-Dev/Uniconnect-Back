@@ -1,7 +1,6 @@
 package com.uniConnect.sampling.entity;
 
 import com.uniConnect.member.entity.User;
-import com.uniConnect.sampling.enums.IndustryType;
 import com.uniConnect.sampling.entity.SamplingTargetSelection;
 import com.uniConnect.sampling.enums.SamplingStatus;
 import jakarta.persistence.*;
@@ -32,8 +31,8 @@ public class SamplingProposal {
     // ===== 1페이지 =====
     private String productName;
 
-    @Enumerated(EnumType.STRING)
-    private IndustryType industry;
+    @Column(name = "industry", length = 50)
+    private String industry;
 
     @Column(columnDefinition = "TEXT")
     private String samplingPurpose;

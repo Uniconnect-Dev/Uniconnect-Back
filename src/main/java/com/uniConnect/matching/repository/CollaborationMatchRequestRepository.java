@@ -55,4 +55,16 @@ public interface CollaborationMatchRequestRepository extends JpaRepository<Colla
             Long campaignId,
             Long companyId
     );
+
+    List<CollaborationMatchRequest>
+    findByStudentOrg_StudentOrgIdAndStatus(
+            Long studentOrgId,
+            MatchingStatus status
+    );
+
+    List<CollaborationMatchRequest>
+    findByCompany_CompanyIdAndStatus(
+            Long companyId,
+            MatchingStatus status
+    );
 }

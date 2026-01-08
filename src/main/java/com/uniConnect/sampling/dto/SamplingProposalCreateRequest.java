@@ -1,6 +1,5 @@
 package com.uniConnect.sampling.dto;
 
-import com.uniConnect.sampling.enums.IndustryType;
 import lombok.Getter;
 
 import java.time.LocalDate;
@@ -9,7 +8,7 @@ import java.time.LocalDate;
 public class SamplingProposalCreateRequest {
 
     private String productName;
-    private IndustryType industry;
+    private String industry;
     private String samplingPurpose;
     private LocalDate samplingStartDate;
     private LocalDate samplingEndDate;

@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface CollaborationRepository extends JpaRepository<Collaboration, Long> {
 
     Optional<Collaboration> findByMatchRequest_Id(Long matchRequestId);
+    Optional<Collaboration> findByMatchRequest(CollaborationMatchRequest matchRequest);
     boolean existsByMatchRequest(CollaborationMatchRequest matchRequest);
 
     @Query("""

@@ -40,7 +40,7 @@ public class SurveyController {
         Object principal = auth.getPrincipal();
 
         if (principal instanceof CustomUser customUser) {
-            return customUser.getUserId();  // ★ 핵심
+            return customUser.getUserId();
         }
 
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인 정보가 올바르지 않습니다.");
@@ -61,14 +61,14 @@ public class SurveyController {
                 ));
     }
 
-    @Operation(summary = "전체 설문 조회")
+    @Operation(summary = "전체 설문 조회(어드민용)")
     @GetMapping
     public ResponseEntity<List<SurveyResponseDto>> getAllSurveys() {
         return ResponseEntity.ok(surveyService.getAllSurveys());
     }
 
-    @Operation(summary = "내 단체 설문 목록 조회", description = "JWT 인증을 통해 로그인한 단체의 설문 목록을 조회합니다.")
-    @GetMapping("/me")
+    @Operation(summary = "내 학생단체 전체 설문 목록 조회", description = "로그인한 단체의 설문 목록을 조회합니다.")
+    @GetMapping("/student-org")
     public ResponseEntity<List<SurveyResponseDto>> getMySurveys() {
 
         Long userId = getLoginUserId();
@@ -77,11 +77,25 @@ public class SurveyController {
         return ResponseEntity.ok(surveyService.getSurveysByOrg(orgId));
     }
 
-    @Operation(summary = "특정 단체의 설문 목록 조회")
-    @GetMapping("/org/{orgId}")
-    public ResponseEntity<List<SurveyResponseDto>> getSurveysByOrg(@PathVariable Long orgId) {
-        return ResponseEntity.ok(surveyService.getSurveysByOrg(orgId));
+    @Operation(
+            summary = "내 기업 전체 설문 응답 목록 조회",
+            description = "JWT 인증을 통해 로그인한 기업이 보유한 모든 설문의 응답을 조회합니다."
+    )
+    @GetMapping("/company")
+    public ResponseEntity<List<SurveyAnswerResponseDto>> getAllSurveyResponsesByCompany() {
+
+        Long userId = getLoginUserId();
+
+        return ResponseEntity.ok(
+                surveyService.getAllResponsesByCompany(userId)
+        );
     }
+
+//    @Operation(summary = "특정 단체의 설문 목록 조회")
+//    @GetMapping("/org/{orgId}")
+//    public ResponseEntity<List<SurveyResponseDto>> getSurveysByOrg(@PathVariable Long orgId) {
+//        return ResponseEntity.ok(surveyService.getSurveysByOrg(orgId));
+//    }
 
     @Operation(summary = "설문 상세 조회")
     @GetMapping("/{id}")
@@ -126,7 +140,7 @@ public class SurveyController {
         return ResponseEntity.ok(Map.of("message", "응답이 제출되었습니다."));
     }
 
-    @Operation(summary = "기업이 설문 응답 목록 조회")
+    @Operation(summary = "기업이 설문 응답 조회")
     @GetMapping("/{id}/responses")
     public ResponseEntity<?> getResponses(
             @PathVariable Long id,

@@ -13,12 +13,17 @@ import com.uniConnect.studentOrg.repository.StudentOrgRepository;
 import com.uniConnect.survey.dto.*;
 import com.uniConnect.survey.entity.*;
 import com.uniConnect.survey.repository.*;
-import lombok.RequiredArgsConstructor;
+import com.uniConnect.global.exception.CustomException;
+import com.uniConnect.global.exception.ErrorCode;
+
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
@@ -85,6 +90,28 @@ public class SurveyService {
                 );
 
         return org.getStudentOrgId();
+    }
+
+    /**
+     *  기업 전체 설문 응답 조회
+     */
+    @Transactional(readOnly = true)
+    public List<SurveyAnswerResponseDto> getAllResponsesByCompany(Long userId) {
+
+        Company company = companyRepository.findByUsers_UserId(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COMPANY_NOT_FOUND));
+
+
+        List<Survey> surveys = surveyRepository.findByCompany(company);
+
+        if (surveys.isEmpty()) {
+            return List.of();
+        }
+
+        return surveyResponseRepository.findBySurveyIn(surveys)
+                .stream()
+                .map(SurveyAnswerResponseDto::fromEntity)
+                .toList();
     }
 
 

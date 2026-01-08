@@ -34,6 +34,15 @@ public class Campaign extends BaseEntity {
     @Column(name = "campaign_id")
     private Long campaignId;
 
+    @Column(name = "manager_name", length = 60)
+    private String managerName;
+
+    @Column(name = "manager_phone", length = 20)
+    private String managerPhone;
+
+    @Column(name = "manager_email", length = 120)
+    private String managerEmail;
+
     @Column(name = "name", length = 120)
     private String name;                         // 행사명
 

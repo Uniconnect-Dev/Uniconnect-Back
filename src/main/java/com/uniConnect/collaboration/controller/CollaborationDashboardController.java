@@ -148,11 +148,11 @@ public class CollaborationDashboardController {
         );
     }
 
-    // 기업: 인수증 승인
+// 어드민 – 인수증 승인
     @Operation(
-            summary = "기업 - 인수증 승인",
-            description = "기업이 학생단체가 제출한 인수증을 검토 후 전자 서명(승인)을 완료합니다. "
-                    + "승인 시 협업 상태가 Completed로 변경됩니다."
+            summary = "어드민 - 인수증 승인",
+            description = "어드민이 학생단체가 제출한 인수증을 검토 후 승인합니다. "
+                    + "승인 완료 시 협업 상태는 리포트 업로드 대기로 변경됩니다."
     )
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
@@ -163,13 +163,19 @@ public class CollaborationDashboardController {
                     )
             )
     )
-    public ApiResponse<ReceiptResponse> approveReceipt(
+    @PostMapping("/admin/receipt/{collaborationId}/approve")
+    public ApiResponse<ReceiptResponse> approveReceiptByAdmin(
             @PathVariable Long collaborationId,
-            @AuthenticationPrincipal CustomUser user
+            HttpServletRequest request
     ) {
+        String token = jwtUtil.resolveToken(request);
+        Claims claims = jwtUtil.parseClaims(token);
+
+        String role = claims.get("role").toString();
+
         return ApiResponse.success(
                 "인수증 승인 완료",
-                dashboardService.approveReceipt(collaborationId, user.getUserId())
+                dashboardService.approveReceiptByAdmin(collaborationId, role)
         );
     }
 

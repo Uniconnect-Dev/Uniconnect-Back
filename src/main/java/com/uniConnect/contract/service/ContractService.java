@@ -214,4 +214,32 @@ public class ContractService {
         contractRepository.save(c);
         return ContractResponseDto.fromEntity(c);
     }
+
+    /**
+     * 계약서 PDF 다운로드 URL 생성
+     */
+    public ContractPdfDownloadResponse getDownloadUrl(Long contractId) {
+
+        Contract contract = contractRepository.findById(contractId)
+                .orElseThrow(() ->
+                        new CustomException(ErrorCode.CONTRACT_NOT_FOUND)
+                );
+
+        Long collaborationId =
+                contract.getCollaboration().getId();
+
+        // S3 저장 규칙
+        // contract/{collaborationId}.pdf
+        String s3Key = "contract/" + collaborationId + ".pdf";
+
+        URL presignedUrl = s3FileService.presignGet(
+                bucket,
+                s3Key,
+                Duration.ofMinutes(10)
+        );
+
+        return ContractPdfDownloadResponse.builder()
+                .downloadUrl(presignedUrl.toString())
+                .build();
+    }
 }

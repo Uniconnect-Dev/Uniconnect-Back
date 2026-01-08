@@ -1,7 +1,11 @@
 package com.uniConnect.campaign.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.uniConnect.member.entity.User;
+import com.uniConnect.member.repository.UserRepository;
 import com.uniConnect.campaign.dto.CampaignCreateRequest;
+import com.uniConnect.campaign.dto.CampaignFirstPageResponse;
+import com.uniConnect.campaign.dto.CampaignFirstPageSaveRequest;
 import com.uniConnect.campaign.entity.Campaign;
 import com.uniConnect.campaign.entity.CampaignTarget;
 import com.uniConnect.campaign.enums.CampaignStatus;
@@ -33,8 +37,57 @@ public class CampaignService {
     private final ObjectMapper objectMapper;
     private final StudentOrgRepository studentOrgRepository;
     private final S3FileService s3FileService;
+    private final UserRepository userRepository;
     @Value("${app.s3.bucket}")
     private String bucketName;
+
+    /**
+     * 캠페인 첫 페이지 조회
+     */
+    @Transactional(readOnly = true)
+    public CampaignFirstPageResponse getFirstPage(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자가 존재하지 않습니다."));
+
+        StudentOrg studentOrg = user.getStudentOrg();
+        if (studentOrg == null) {
+            throw new IllegalStateException("학생단체 소속 사용자만 캠페인을 생성할 수 있습니다.");
+        }
+
+        return CampaignFirstPageResponse.builder()
+                .schoolName(studentOrg.getSchoolName())
+                .organizationName(studentOrg.getOrganizationName())
+                .build();
+    }
+
+    /**
+     * 캠페인 첫 페이지 저장 (캠페인 생성)
+     */
+    public Long saveFirstPage(
+            Long userId,
+            CampaignFirstPageSaveRequest request
+    ) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자가 존재하지 않습니다."));
+
+        StudentOrg studentOrg = user.getStudentOrg();
+        if (studentOrg == null) {
+            throw new IllegalStateException("학생단체 소속 사용자만 캠페인을 생성할 수 있습니다.");
+        }
+
+        Campaign campaign = Campaign.builder()
+                .studentOrg(studentOrg)
+                .managerName(request.getManagerName())
+                .managerPhone(request.getManagerPhone())
+                .managerEmail(request.getManagerEmail())
+                .status(CampaignStatus.Draft)
+                .build();
+
+        campaignRepository.save(campaign);
+        return campaign.getCampaignId();
+    }
 
     /**
      * 한 페이지 입력 → Campaign 생성
