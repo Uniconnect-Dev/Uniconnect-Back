@@ -52,15 +52,10 @@ public class ContractSignService {
                 getCurrentUserId()
         );
 
-        // 계약 상태 반영
         contract.setStudentSigned(true);
         contract.setStudentSignedAt(LocalDateTime.now());
 
-        if (Boolean.TRUE.equals(contract.getCompanySigned())) {
-            contract.setStatus(ContractStatus.Signed);
-        } else {
-            contract.setStatus(ContractStatus.StudentSigned);
-        }
+        contract.setStatus(ContractStatus.Signed);
     }
 
     /**
@@ -74,10 +69,6 @@ public class ContractSignService {
 
         if (Boolean.TRUE.equals(contract.getCompanySigned())) {
             throw new CustomException(ErrorCode.CONTRACT_ALREADY_SIGNED);
-        }
-
-        if (contract.getStatus() != ContractStatus.PendingSignature) {
-            throw new CustomException(ErrorCode.INVALID_CONTRACT_STATUS);
         }
 
         signatureService.saveSignature(
