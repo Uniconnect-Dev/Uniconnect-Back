@@ -66,7 +66,16 @@ public class CampaignController {
      * 캠페인 생성 (한 페이지 입력)
      */
     @PostMapping
-    @Operation(summary = "협업 요청 정보 입력")
+    @Operation(
+            summary = "협업 요청 정보 입력",
+            description = """
+        학생 단체가 기업과의 협업 캠페인을 생성합니다.
+
+        collaborationType 값:
+        - Sampling : 샘플링
+        - Partnership : 제휴
+        """
+    )
     public ApiResponse<Long> createCampaign(
             @AuthenticationPrincipal CustomUser user,
             @RequestBody CampaignCreateRequest request
