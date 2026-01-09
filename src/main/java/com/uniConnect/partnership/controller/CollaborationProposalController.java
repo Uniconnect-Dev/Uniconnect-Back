@@ -23,7 +23,22 @@ public class CollaborationProposalController {
     private final CollaborationProposalService proposalService;
 
     @PostMapping
-    @Operation(summary = "1페이지: 기업 협업 제안 생성")
+    @Operation(
+            summary = "1페이지: 기업 협업 제안 생성",
+            description = """
+        기업이 학생 단체에 협업 제안을 생성합니다.
+
+        [제휴 유형 (proposalType)]
+        - Discount : 학생 대상 할인 제휴
+        - Etc : 기타 제휴 유형
+
+        [협업 기간 유형 (periodType)]
+        - Always : 상시 협업 (종료일 없음, startDate/endDate 미입력)
+        - Fixed : 기간 지정 협업 (startDate, endDate 필수)
+
+        ※ periodType이 Fixed인 경우 startDate와 endDate는 반드시 입력해야 합니다.
+        """
+    )
     public ApiResponse<Long> createProposal(
             @AuthenticationPrincipal CustomUser user,
             @RequestBody CollaborationProposalCreateRequest request

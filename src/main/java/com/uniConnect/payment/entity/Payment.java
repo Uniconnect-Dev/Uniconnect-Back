@@ -53,10 +53,13 @@ public class Payment {
     @JoinColumn(name = "student_org_id")
     private StudentOrg studentOrg;
 
-    //추가
+    //추가: 단일, 다중상품
     @ManyToOne(fetch= FetchType.LAZY)
     @JoinColumn(name="product_id")
     private Product product;
+
+    @Column(name = "cart_id")
+    private Long cartId;
 
     //추가
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -66,6 +66,7 @@ public enum ErrorCode {
     COLLABORATION_NOT_FOUND(HttpStatus.NOT_FOUND, "협업 정보를 찾을 수 없습니다."),
     CAMPAIGN_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 캠페인을 찾을 수 없습니다."),
     REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 리포트를 찾을 수 없습니다."),
+    INVALID_STATE(HttpStatus.BAD_REQUEST, "아직 기업이 확정되지 않은 협업입니다."),
 
     // 전자서명 관련
     SIGNATURE_EXPIRED(HttpStatus.BAD_REQUEST, "서명 시간이 만료되었습니다."),
