@@ -21,7 +21,7 @@ public class CollaborationController {
 //        return ApiResponse.success("추천 기업 상태로 변경됨");
 //    }
 
-    @Operation(summary = "계약서 발송 (Admin)",
+    @Operation(summary = "어드민 계약서 발송",
             description = "기업이 제안을 수락한 후 어드민이 학생에게 계약서를 발송하며 상태를 ContractSent로 변경합니다.")
     @PostMapping("/{id}/send-contract")
     public ApiResponse<String> sendContract(
@@ -32,13 +32,13 @@ public class CollaborationController {
         return ApiResponse.success("계약서 발송됨");
     }
 
-    @Operation(summary = "학생 서명 제출",
-            description = "학생이 계약서 확인 후 전자서명을 제출하며 상태를 WaitingAdminApproval로 변경합니다.")
-    @PostMapping("/{id}/sign")
-    public ApiResponse<String> signContract(@PathVariable Long id) {
-        collaborationService.studentSign(id);
-        return ApiResponse.success("학생 서명 완료");
-    }
+//    @Operation(summary = "학생 서명 제출",
+//            description = "학생이 계약서 확인 후 전자서명을 제출하며 상태를 WaitingAdminApproval로 변경합니다.")
+//    @PostMapping("/{id}/sign")
+//    public ApiResponse<String> signContract(@PathVariable Long id) {
+//        collaborationService.studentSign(id);
+//        return ApiResponse.success("학생 서명 완료");
+//    }
 
     @Operation(summary = "어드민 계약 승인",
             description = "어드민이 학생 서명을 검토하여 최종 승인하면 상태가 WaitingReportUpload로 변경됩니다.")
@@ -48,16 +48,16 @@ public class CollaborationController {
         return ApiResponse.success("계약 승인 완료");
     }
 
-    @Operation(summary = "리포트 업로드",
-            description = "학생단체가 마케팅 활동 리포트를 업로드하며 상태가 WaitingReportApproval로 변경됩니다.")
-    @PostMapping("/{id}/upload-report")
-    public ApiResponse<String> uploadReport(
-            @PathVariable Long id,
-            @RequestParam String reportUrl
-    ) {
-        collaborationService.uploadReport(id, reportUrl);
-        return ApiResponse.success("리포트 제출 완료");
-    }
+//    @Operation(summary = "리포트 업로드",
+//            description = "학생단체가 마케팅 활동 리포트를 업로드하며 상태가 WaitingReportApproval로 변경됩니다.")
+//    @PostMapping("/{id}/upload-report")
+//    public ApiResponse<String> uploadReport(
+//            @PathVariable Long id,
+//            @RequestParam String reportUrl
+//    ) {
+//        collaborationService.uploadReport(id, reportUrl);
+//        return ApiResponse.success("리포트 제출 완료");
+//    }
 
     @Operation(summary = "어드민 리포트 승인",
             description = "어드민이 제출된 리포트를 검토하고 승인하면 최종 상태가 Completed로 변경됩니다.")
