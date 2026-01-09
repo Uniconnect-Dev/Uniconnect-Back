@@ -15,7 +15,10 @@ import com.uniConnect.payment.enums.PaymentStatus;
 import com.uniConnect.payment.repository.*;
 import com.uniConnect.company.repository.CompanyRepository;
 import com.uniConnect.company.entity.Company;
+import com.uniConnect.shop.entity.CartItem;
 import com.uniConnect.shop.entity.Product;
+import com.uniConnect.shop.repository.CartItemRepository;
+import com.uniConnect.shop.repository.CartRepository;
 import com.uniConnect.shop.repository.ProductRepository;
 import com.uniConnect.studentOrg.entity.StudentOrg;
 import com.uniConnect.studentOrg.repository.StudentOrgRepository;
@@ -25,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -40,6 +44,8 @@ public class PaymentService {
     private final CompanyRepository companyRepository;
     private final CompanyContactRepository companyContactRepository;
     private final StudentOrgRepository studentOrgRepository;
+    private final CartRepository cartRepository;
+    private final CartItemRepository cartItemRepository;
     private final DummyPgGatewayAdapter pgGatewayAdapter;
     private final PaymentNotificationServiceImpl notificationService;
     private final CollaborationMatchRequestRepository collaborationMatchRequestRepository;
@@ -413,6 +419,120 @@ public class PaymentService {
                 .createdAt(payment.getCreatedAt())
                 .completedAt(payment.getCompletedAt())
                 .build();
+    }
+
+    /**
+     * 장바구니 결제 진행 (다중 상품)
+     */
+    public PaymentDto.CartPaymentResponse createCartPayment(
+            Long studentOrgId,
+            PaymentDto.CartPaymentCreateRequest request) {
+
+        // 1) StudentOrg 존재 확인
+        StudentOrg studentOrg = studentOrgRepository.findById(studentOrgId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        // 2) 결제 수단 조회 및 권한 확인 (StudentOrg 결제 수단만 사용 가능)
+        PaymentMethod method = paymentMethodRepository.findById(request.getPaymentMethodId())
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+        if (method.getStudentOrg() == null || !method.getStudentOrg().getStudentOrgId().equals(studentOrgId)) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // 3) 장바구니 아이템 검증 및 금액 계산
+        List<PaymentDto.CartPaymentCreateRequest.CartItemRequest> cartItems = request.getCartItems();
+        if (cartItems == null || cartItems.isEmpty()) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
+        int totalAmount = 0;
+        List<PaymentDto.CartPaymentResponse.CartItemResponse> responseItems = new ArrayList<>();
+
+        for (PaymentDto.CartPaymentCreateRequest.CartItemRequest item : cartItems) {
+            Product product = productRepository.findByIdWithCompany(item.getProductId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
+
+            Integer subtotal = product.getPrice() * item.getQuantity();
+            totalAmount += subtotal;
+
+            responseItems.add(PaymentDto.CartPaymentResponse.CartItemResponse.builder()
+                    .productId(product.getProductId())
+                    .productName(product.getName())
+                    .unitPrice(product.getPrice())
+                    .quantity(item.getQuantity())
+                    .subtotal(subtotal)
+                    .build());
+        }
+
+        // 4) Payment 엔티티 생성 (Cart 기반)
+        Payment payment = Payment.builder()
+                .studentOrg(studentOrg)
+                .amount(totalAmount)
+                .method(method)
+                .status(PaymentStatus.PROCESSING)
+                .build();
+        paymentRepository.save(payment);
+
+        try {
+            // 5) PG사에 결제 요청
+            String transactionId = pgGatewayAdapter.processPayment(
+                    payment.getPaymentId(),
+                    totalAmount,
+                    method
+            );
+
+            // 6) 결제 성공 업데이트
+            payment.setStatus(PaymentStatus.SUCCESS);
+            payment.setTransactionId(transactionId);
+            payment.setCompletedAt(LocalDateTime.now());
+            paymentRepository.save(payment);
+
+            log.info("[Cart 결제 성공] PaymentId={}, StudentOrgId={}, 상품수={}, 총금액={}",
+                    payment.getPaymentId(), studentOrgId, cartItems.size(), totalAmount);
+
+            // 7) 알림 발송
+            notificationService.notifyPaymentSuccess(payment);
+
+            // 8) 결제 후 장바구니 초기화 (선택사항)
+            clearStudentOrgCart(studentOrgId);
+
+            return PaymentDto.CartPaymentResponse.builder()
+                    .paymentId(payment.getPaymentId())
+                    .totalAmount(totalAmount)
+                    .status(payment.getStatus())
+                    .transactionId(transactionId)
+                    .createdAt(payment.getCreatedAt())
+                    .completedAt(payment.getCompletedAt())
+                    .items(responseItems)
+                    .build();
+
+        } catch (Exception e) {
+            payment.setStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+
+            log.error("[Cart 결제 실패] PaymentId={}, StudentOrgId={}, Error={}",
+                    payment.getPaymentId(), studentOrgId, e.getMessage(), e);
+            notificationService.notifyPaymentFailed(payment);
+            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+        }
+    }
+
+    /**
+     * 장바구니 초기화 (결제 후)
+     */
+    private void clearStudentOrgCart(Long studentOrgId) {
+        try {
+            cartRepository.findByStudentOrgStudentOrgId(studentOrgId)
+                    .ifPresent(cart -> {
+                        cart.getItems().clear();
+                        cartRepository.save(cart);
+                        log.info("[장바구니 초기화] StudentOrgId={}", studentOrgId);
+                    });
+        } catch (Exception e) {
+            log.warn("[장바구니 초기화 실패] StudentOrgId={}, Error={}", studentOrgId, e.getMessage());
+            // 장바구니 초기화 실패는 결제 롤백하지 않음
+        }
     }
 
     /**

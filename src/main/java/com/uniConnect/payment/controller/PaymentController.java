@@ -212,6 +212,16 @@ public class PaymentController {
         return ResponseEntity.ok(paymentService.retryProductPayment(paymentId, studentOrgId));
     }
 
+    @PostMapping("/{studentOrgId}/checkout")
+    @Operation(summary= "장바구니 결제")
+    public ResponseEntity<PaymentDto.CartPaymentResponse> checkoutCart(
+            @PathVariable Long studentOrgId,
+            @RequestBody @Valid PaymentDto.CartPaymentCreateRequest request) {
+
+        PaymentDto.CartPaymentResponse response = paymentService.createCartPayment(studentOrgId, request);
+        return ResponseEntity.ok(response);
+    }
+
 //     ===== 4. 세금계산서/영수증 발행 =====
 
     /**

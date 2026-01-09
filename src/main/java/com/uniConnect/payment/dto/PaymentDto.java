@@ -6,6 +6,8 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
 //static inner class
 public class PaymentDto {
     @Data
@@ -124,6 +126,55 @@ public class PaymentDto {
         private String transactionId;
         private LocalDateTime createdAt;
         private LocalDateTime completedAt;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CartPaymentCreateRequest {
+        @NotEmpty(message = "장바구니 아이템은 필수입니다")
+        private List<CartItemRequest> cartItems;
+
+        @NotNull(message = "결제 수단 ID는 필수입니다")
+        private Long paymentMethodId;
+
+        private String notes;  // 비고
+
+        @Data
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class CartItemRequest {
+            @NotNull(message = "Product ID는 필수입니다")
+            private Long productId;
+
+            @NotNull(message = "수량은 필수입니다")
+            @Min(value = 1, message = "수량은 1 이상이어야 합니다")
+            private Integer quantity;
+        }
+    }
+
+    @Data
+    @Builder
+    public static class CartPaymentResponse {
+        private Long paymentId;
+        private Integer totalAmount;
+        private PaymentStatus status;
+        private String transactionId;
+        private LocalDateTime createdAt;
+        private LocalDateTime completedAt;
+
+        // 결제된 상품 목록
+        private List<CartItemResponse> items;
+
+        @Data
+        @Builder
+        public static class CartItemResponse {
+            private Long productId;
+            private String productName;
+            private Integer unitPrice;
+            private Integer quantity;
+            private Integer subtotal;
+        }
     }
 
     @Data
