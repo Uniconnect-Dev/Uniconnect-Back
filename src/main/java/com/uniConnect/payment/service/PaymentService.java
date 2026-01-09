@@ -87,14 +87,18 @@ public class PaymentService {
                 .orElseThrow(()->new CustomException(ErrorCode.NOT_FOUND));
 
         // 2) 권한 확인
-        validateMatchRequestPermission(matchRequest, request.getRequesterId(), request.getRequesterType());
+        validateMatchRequestPermission(matchRequest, request.getRequesterType());
 
         // 3) 결제 수단 조회, 권한 확인
         PaymentMethod method = paymentMethodRepository.findById(request.getPaymentMethodId())
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
-        validatePaymentMethodPermission(method, matchRequest);
+//        validatePaymentMethodPermission(method, matchRequest);
 
+        // 4) Payment 엔티티 생성
+        // sender가 결제자이므로:
+        // - STUDENT_ORG sender: studentOrg가 company에게 결제
+        // - COMPANY sender: company가 studentOrg에게 결제
         // 4) Payment 엔티티 생성
         Payment payment = Payment.builder()
                 .company(matchRequest.getCompany())
@@ -142,37 +146,39 @@ public class PaymentService {
 
     /**
      * 권한 확인: 결제 요청자가 CollabMatchReq에 속하는지 확인, 결제 수단 권한 확인
+     * 기업이 requesterType: 기업이 matchSender
      */
-    private void validateMatchRequestPermission(CollaborationMatchRequest matchRequest, Long requesterId, String requesterType) {
+    private void validateMatchRequestPermission(CollaborationMatchRequest matchRequest, String requesterType) {
         if ("COMPANY".equalsIgnoreCase(requesterType)) {
-            if (!matchRequest.getCompany().getCompanyId().equals(requesterId)) {
+            if (!"COMPANY".equals(matchRequest.getSender().toString())) {
                 throw new CustomException(ErrorCode.UNAUTHORIZED);
             }
         }
         else if ("STUDENT_ORG".equalsIgnoreCase(requesterType) || "STUDENTORG".equalsIgnoreCase(requesterType)) {
-            if (!matchRequest.getStudentOrg().getStudentOrgId().equals(requesterId)) {
+            if (!"STUDENT_ORG".equals(matchRequest.getSender().toString())) {
                 throw new CustomException(ErrorCode.UNAUTHORIZED);
             }
         }
         else throw new CustomException(ErrorCode.UNAUTHORIZED);
     }
 
-    private void validatePaymentMethodPermission(PaymentMethod method, CollaborationMatchRequest matchRequest) {
-        Company company = matchRequest.getCompany();
-        StudentOrg studentOrg = matchRequest.getStudentOrg();
-
-        if (company != null && method.getCompany() != null) {
-            if (!method.getCompany().getCompanyId().equals(company.getCompanyId())) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED);
-            }
-        } else if (studentOrg != null && method.getStudentOrg() != null) {
-            if (!method.getStudentOrg().getStudentOrgId().equals(studentOrg.getStudentOrgId())) {
-                throw new CustomException(ErrorCode.UNAUTHORIZED);
-            }
-        } else {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
-        }
-    }
+    // payment 검증: 송신자 정보가 collabMatchReq에 없어 불가
+//    private void validatePaymentMethodPermission(PaymentMethod method, CollaborationMatchRequest matchRequest, String requesterType) {
+//        Company company = matchRequest.getCompany();
+//        StudentOrg studentOrg = matchRequest.getStudentOrg();
+//
+//        if (company != null && method.getCompany() != null) {
+//            if (!method.getCompany().getCompanyId().equals(company.getCompanyId())) {
+//                throw new CustomException(ErrorCode.UNAUTHORIZED);
+//            }
+//        } else if (studentOrg != null && method.getStudentOrg() != null) {
+//            if (!method.getStudentOrg().getStudentOrgId().equals(studentOrg.getStudentOrgId())) {
+//                throw new CustomException(ErrorCode.UNAUTHORIZED);
+//            }
+//        } else {
+//            throw new CustomException(ErrorCode.UNAUTHORIZED);
+//        }
+//    }
 
     /**
      * InvoiceRequest 자동 생성 (결제 성공 후)

@@ -25,7 +25,7 @@ public class CompanyProfileController {
     @Operation(summary = "기업 프로필 초기 생성", description = "필수 정보: 브랜드명, 산업 분야")
     public ResponseEntity<ApiResponse<CompanyGetResponse>> initProfile(
             @AuthenticationPrincipal CustomUser customUser,
-            @RequestBody CompanyInitRequest request
+            @RequestBody CompanyInitRequest requeste
     ) {
         CompanyGetResponse response = companyProfileService.initProfile(customUser.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(response));
