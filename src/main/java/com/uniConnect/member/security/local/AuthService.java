@@ -2,9 +2,14 @@ package com.uniConnect.member.security.local;
 
 import com.uniConnect.common.service.EmailService;
 import com.uniConnect.common.service.impl.EmailServiceImpl;
+import com.uniConnect.company.entity.Company;
+import com.uniConnect.company.repository.CompanyRepository;
+import com.uniConnect.member.entity.BusinessRegistration;
 import com.uniConnect.member.entity.EmailVerification;
 import com.uniConnect.member.entity.LocalCredential;
 import com.uniConnect.member.enums.UserStatus;
+import com.uniConnect.member.enums.VerifiedStatus;
+import com.uniConnect.member.repository.BusinessRegistrationRepository;
 import com.uniConnect.member.repository.EmailVerificationRepository;
 import com.uniConnect.member.repository.LocalCredentialRepository;
 import com.uniConnect.member.security.local.dto.*;
@@ -20,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -28,8 +34,10 @@ public class AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository usersRepository;
+    private final CompanyRepository companyRepository;
     private final LocalCredentialRepository localCredentialRepository;
     private final EmailVerificationRepository emailVerificationRepository;
+    private final BusinessRegistrationRepository businessRegistrationRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService; //구현체가 아닌 추상(DIP)에 의존
@@ -301,5 +309,146 @@ public class AuthService {
         // blacklistRepository.save(new TokenBlacklist(accessToken, expiryTime));
         
         return AuthDto.LocalLogoutResp.success("Logged out successfully");
+    }
+
+    /**
+     * 사업자 등록 정보 생성
+     */
+    public AuthDto.BusinessRegistrationResponse createBusinessRegistration(AuthDto.BusinessRegistrationReq dto) {
+//        User user = usersRepository.findById(dto.getUsersId())
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Company company = companyRepository.findById(dto.getCompanyId())
+                .orElseThrow(() -> new RuntimeException("Company not found"));
+
+        BusinessRegistration businessRegistration = BusinessRegistration.builder()
+                .registrationNo(dto.getRegistrationNo())
+                .companyName(dto.getCompanyName())
+                .representativeName(dto.getRepresentativeName())
+                .openDate(dto.getOpenDate())
+                .bizType(dto.getBizType())
+                .bizItem(dto.getBizItem())
+                .certificateUrl(dto.getCertificateUrl())
+                .verifiedStatus(VerifiedStatus.Pending)
+//                .user(user)
+                .company(company)
+                .build();
+
+        BusinessRegistration saved = businessRegistrationRepository.save(businessRegistration);
+        return convertToResponseDTO(saved);
+    }
+
+    /**
+     * 사업자 등록 정보 조회 (ID로)
+     */
+    @Transactional(readOnly = true)
+    public AuthDto.BusinessRegistrationResponse getBusinessRegistration(Long registrationId) {
+        BusinessRegistration businessRegistration = businessRegistrationRepository.findById(registrationId)
+                .orElseThrow(() -> new RuntimeException("Business Registration not found"));
+        return convertToResponseDTO(businessRegistration);
+    }
+
+    /**
+     * 회사별 사업자 등록 정보 조회
+     */
+    @Transactional(readOnly = true)
+    public AuthDto.BusinessRegistrationResponse getBusinessRegistrationByCompany(Long companyId) {
+        BusinessRegistration businessRegistration = businessRegistrationRepository.findByCompanyCompanyId(companyId)
+                .orElseThrow(() -> new RuntimeException("Business Registration not found for company"));
+        return convertToResponseDTO(businessRegistration);
+    }
+
+//    /**
+//     * 사용자별 사업자 등록 정보 조회
+//     */
+//    @Transactional(readOnly = true)
+//    public AuthDto.BusinessRegistrationResponse getBusinessRegistrationByUser(Long userId) {
+//        BusinessRegistration businessRegistration = businessRegistrationRepository.findByUserUserId(userId)
+//                .orElseThrow(() -> new RuntimeException("Business Registration not found for user"));
+//        return convertToResponseDTO(businessRegistration);
+//    }
+
+    /**
+     * 사업자등록번호로 조회
+     */
+    @Transactional(readOnly = true)
+    public AuthDto.BusinessRegistrationResponse getBusinessRegistrationByRegistrationNo(String registrationNo) {
+        BusinessRegistration businessRegistration = businessRegistrationRepository.findByRegistrationNo(registrationNo)
+                .orElseThrow(() -> new RuntimeException("Business Registration not found"));
+        return convertToResponseDTO(businessRegistration);
+    }
+
+    /**
+     * 사업자 등록 정보 업데이트
+     */
+    public AuthDto.BusinessRegistrationResponse updateBusinessRegistration(Long registrationId, AuthDto.BusinessRegistrationReq dto) {
+        BusinessRegistration businessRegistration = businessRegistrationRepository.findById(registrationId)
+                .orElseThrow(() -> new RuntimeException("Business Registration not found"));
+
+        businessRegistration.setRegistrationNo(dto.getRegistrationNo());
+        businessRegistration.setCompanyName(dto.getCompanyName());
+        businessRegistration.setRepresentativeName(dto.getRepresentativeName());
+        businessRegistration.setOpenDate(dto.getOpenDate());
+        businessRegistration.setBizType(dto.getBizType());
+        businessRegistration.setBizItem(dto.getBizItem());
+        businessRegistration.setCertificateUrl(dto.getCertificateUrl());
+
+        BusinessRegistration updated = businessRegistrationRepository.save(businessRegistration);
+        return convertToResponseDTO(updated);
+    }
+
+    /**
+     * 사업자 등록 정보 검증 승인
+     */
+    public AuthDto.BusinessRegistrationResponse verifyBusinessRegistration(Long registrationId) {
+        BusinessRegistration businessRegistration = businessRegistrationRepository.findById(registrationId)
+                .orElseThrow(() -> new RuntimeException("Business Registration not found"));
+
+        businessRegistration.setVerifiedStatus(VerifiedStatus.Verified);
+        businessRegistration.setVerifiedAt(LocalDateTime.now());
+
+        BusinessRegistration updated = businessRegistrationRepository.save(businessRegistration);
+        return convertToResponseDTO(updated);
+    }
+
+    /**
+     * 사업자 등록 정보 검증 거절
+     */
+    public AuthDto.BusinessRegistrationResponse rejectBusinessRegistration(Long registrationId) {
+        BusinessRegistration businessRegistration = businessRegistrationRepository.findById(registrationId)
+                .orElseThrow(() -> new RuntimeException("Business Registration not found"));
+
+        businessRegistration.setVerifiedStatus(VerifiedStatus.Rejected);
+        businessRegistration.setVerifiedAt(LocalDateTime.now());
+
+        BusinessRegistration updated = businessRegistrationRepository.save(businessRegistration);
+        return convertToResponseDTO(updated);
+    }
+
+    /**
+     * 사업자 등록 정보 삭제
+     */
+    public void deleteBusinessRegistration(Long registrationId) {
+        businessRegistrationRepository.deleteById(registrationId);
+    }
+
+    /**
+     * DTO 변환 메서드
+     */
+    private AuthDto.BusinessRegistrationResponse convertToResponseDTO(BusinessRegistration businessRegistration) {
+        return AuthDto.BusinessRegistrationResponse.builder()
+                .registrationId(businessRegistration.getRegistrationId())
+                .registrationNo(businessRegistration.getRegistrationNo())
+                .companyName(businessRegistration.getCompanyName())
+                .representativeName(businessRegistration.getRepresentativeName())
+                .openDate(businessRegistration.getOpenDate())
+                .bizType(businessRegistration.getBizType())
+                .bizItem(businessRegistration.getBizItem())
+                .certificateUrl(businessRegistration.getCertificateUrl())
+                .verifiedStatus(businessRegistration.getVerifiedStatus())
+                .verifiedAt(businessRegistration.getVerifiedAt())
+                .userId(businessRegistration.getUser().getUserId())
+                .companyId(businessRegistration.getCompany().getCompanyId())
+                .build();
     }
 }

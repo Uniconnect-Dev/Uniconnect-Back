@@ -2,10 +2,13 @@ package com.uniConnect.member.security.local.dto;
 
 import com.uniConnect.member.enums.UserRole;
 import com.uniConnect.member.enums.UserStatus;
+import com.uniConnect.member.enums.VerifiedStatus;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class AuthDto {
     @Data
@@ -88,7 +91,7 @@ public class AuthDto {
         @NotBlank(message = "담당자 이름은 필수입니다")
         private String managerName;
 
-        @NotBlank(message = "연락처는 필수입니다")
+//        @NotBlank(message = "연락처는 필수입니다")
 //        @Pattern(regexp = "^01[0-9]-?\\d{3,4}-?\\d{4}$", message = "유효한 전화번호 형식이 아닙니다")
 //        private String phone;
 
@@ -208,6 +211,41 @@ public class AuthDto {
     public static class VerifyEmailCodeResp {
         private boolean success;
         private String message;  // "이메일 인증이 완료되었습니다"
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class BusinessRegistrationReq {
+        private String registrationNo;      // 사업자등록번호
+        private String companyName;         // 회사명
+        private String representativeName;  // 대표자명
+        private LocalDate openDate;         // 개업연월일
+        private String bizType;             // 사업업태
+        private String bizItem;             // 종목
+        private String certificateUrl;      // 증명서 URL
+//        private Long userId;                // 사용자 ID
+        private Long companyId;             // 회사 ID
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class BusinessRegistrationResponse {
+        private Long registrationId;
+        private String registrationNo;      // 사업자등록번호
+        private String companyName;         // 회사명
+        private String representativeName;  // 대표자명
+        private LocalDate openDate;         // 개업연월일
+        private String bizType;             // 사업업태
+        private String bizItem;             // 종목
+        private String certificateUrl;      // 증명서 URL
+        private VerifiedStatus verifiedStatus;
+        private LocalDateTime verifiedAt;
+        private Long userId;
+        private Long companyId;
     }
 }
 
