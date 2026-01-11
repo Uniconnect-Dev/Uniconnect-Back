@@ -56,6 +56,9 @@ public class ContractSignService {
         contract.setStudentSignedAt(LocalDateTime.now());
 
         contract.setStatus(ContractStatus.Signed);
+
+        contract.getCollaboration()
+                .setStatus(CollaborationStatus.WaitingReceiptUpload);
     }
 
     /**
@@ -85,6 +88,9 @@ public class ContractSignService {
         if (Boolean.TRUE.equals(contract.getStudentSigned())) {
             contract.setStatus(ContractStatus.Signed);
         }
+
+        contract.getCollaboration()
+                .setStatus(CollaborationStatus.WaitingStudentSignature);
     }
 
     /**
