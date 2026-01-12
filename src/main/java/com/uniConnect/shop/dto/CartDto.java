@@ -29,6 +29,7 @@ public class CartDto {
         private Integer unitPrice;
         private Integer quantity;
         private Integer subtotal;
+        private String thumbnailUrl;
     }
 
     @Data

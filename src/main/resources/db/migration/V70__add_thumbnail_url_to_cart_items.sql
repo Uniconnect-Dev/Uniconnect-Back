@@ -1,0 +1,1 @@
+alter table cart_items add column thumbnail_url TEXT;
