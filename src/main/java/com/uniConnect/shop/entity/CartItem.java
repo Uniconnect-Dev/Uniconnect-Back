@@ -30,10 +30,22 @@ public class CartItem extends BaseEntity {
     @Column(nullable = false)
     private Integer quantity;
 
+    @Column(name = "thumbnail_url", columnDefinition = "text")
+    private String thumbnailUrl;
+
     /**
      * 해당 CartItem의 소계 계산
      */
     public Integer getSubtotal() {
         return product.getPrice() * quantity;
+    }
+
+    /**
+     * Product에서 thumbnailUrl을 가져와 저장
+     */
+    public void syncThumbnailUrlFromProduct() {
+        if (this.product != null) {
+            this.thumbnailUrl = this.product.getThumbnailUrl();
+        }
     }
 }

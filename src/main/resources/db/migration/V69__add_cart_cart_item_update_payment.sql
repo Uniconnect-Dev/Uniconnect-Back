@@ -33,8 +33,21 @@ CREATE INDEX IF NOT EXISTS idx_cart_items_product_id ON cart_items(product_id);
 -- Add cart_id column to payments table if not exists
 -- This allows payments to be linked to either a single product or a cart of multiple products
 ALTER TABLE payments
-    ADD COLUMN IF NOT EXISTS cart_id BIGINT,
-    ADD CONSTRAINT fk_payments_cart_id FOREIGN KEY (cart_id) REFERENCES carts(cart_id) ON DELETE SET NULL;
+    ADD COLUMN IF NOT EXISTS cart_id BIGINT;
+DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conname = 'fk_payments_cart_id'
+        ) THEN
+            ALTER TABLE payments
+                ADD CONSTRAINT fk_payments_cart_id
+                    FOREIGN KEY (cart_id)
+                        REFERENCES carts(cart_id)
+                        ON DELETE SET NULL;
+        END IF;
+    END $$;
 
 -- Create index for cart_id in payments
 CREATE INDEX IF NOT EXISTS idx_payments_cart_id ON payments(cart_id);

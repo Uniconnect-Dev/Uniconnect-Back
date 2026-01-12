@@ -75,6 +75,7 @@ public class CartService {
                     .cart(cart)
                     .product(product)
                     .quantity(request.getQuantity())
+                    .thumbnailUrl(product.getThumbnailUrl())
                     .build();
             cart.getItems().add(newItem);
             cartRepository.save(cart);
@@ -170,6 +171,9 @@ public class CartService {
                         .unitPrice(item.getProduct().getPrice())
                         .quantity(item.getQuantity())
                         .subtotal(item.getSubtotal())
+                        .thumbnailUrl(item.getThumbnailUrl() != null
+                                ? item.getThumbnailUrl()
+                                : item.getProduct().getThumbnailUrl())
                         .build())
                 .collect(Collectors.toList());
 
