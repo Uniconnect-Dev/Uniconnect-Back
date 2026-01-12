@@ -9,6 +9,7 @@ import com.uniConnect.global.exception.ErrorCode;
 import com.uniConnect.member.security.local.CustomUser;
 import com.uniConnect.signature.dto.SignatureRequest;
 import com.uniConnect.signature.service.SignatureService;
+import com.uniConnect.collaboration.enums.CollaborationStatus;
 
 import lombok.RequiredArgsConstructor;
 
