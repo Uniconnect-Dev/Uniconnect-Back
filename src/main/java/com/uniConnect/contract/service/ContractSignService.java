@@ -9,6 +9,7 @@ import com.uniConnect.global.exception.ErrorCode;
 import com.uniConnect.member.security.local.CustomUser;
 import com.uniConnect.signature.dto.SignatureRequest;
 import com.uniConnect.signature.service.SignatureService;
+import com.uniConnect.collaboration.enums.CollaborationStatus;
 
 import lombok.RequiredArgsConstructor;
 
@@ -56,6 +57,9 @@ public class ContractSignService {
         contract.setStudentSignedAt(LocalDateTime.now());
 
         contract.setStatus(ContractStatus.Signed);
+
+        contract.getCollaboration()
+                .setStatus(CollaborationStatus.WaitingReceiptUpload);
     }
 
     /**
@@ -85,6 +89,9 @@ public class ContractSignService {
         if (Boolean.TRUE.equals(contract.getStudentSigned())) {
             contract.setStatus(ContractStatus.Signed);
         }
+
+        contract.getCollaboration()
+                .setStatus(CollaborationStatus.WaitingStudentSignature);
     }
 
     /**
