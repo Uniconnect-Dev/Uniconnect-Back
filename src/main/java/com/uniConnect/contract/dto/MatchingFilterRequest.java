@@ -17,4 +17,6 @@ public class MatchingFilterRequest {
     private String collaborationType;
 
     private String contractStatus;
+
+    private String keyword;
 }

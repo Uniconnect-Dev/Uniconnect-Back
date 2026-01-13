@@ -51,11 +51,38 @@ public class PaymentService {
     private final CollaborationMatchRequestRepository collaborationMatchRequestRepository;
     private final InvoiceRequestService invoiceRequestService;
 
+    private boolean matchPaymentState(Payment payment, String paymentState) {
+        if (paymentState == null) return true;
+
+        return switch (paymentState) {
+            case "PENDING" ->
+                    payment.getStatus() == PaymentStatus.PENDING ||
+                            payment.getStatus() == PaymentStatus.PROCESSING;
+
+            case "COMPLETED" ->
+                    payment.getStatus() == PaymentStatus.SUCCESS;
+
+            case "FAILED" ->
+                    payment.getStatus() == PaymentStatus.FAILED ||
+                            payment.getStatus() == PaymentStatus.CANCELED;
+
+            case "REFUNDED" ->
+                    payment.getStatus() == PaymentStatus.REFUNDING ||
+                            payment.getStatus() == PaymentStatus.REFUNDED;
+
+            default -> true;
+        };
+    }
+
     /**
      * 1. 기업의 모든 결제 내역 조회
      */
     @Transactional(readOnly = true)
-    public List<PaymentDto.PaymentListResponse> getPayments(Long companyId) {
+    public List<PaymentDto.PaymentListResponse> getPayments(
+            Long companyId,
+            String paymentState,
+            String studentOrgName
+    ) {
         // 회사 존재 여부 확인
         companyRepository.findById(companyId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
@@ -64,6 +91,14 @@ public class PaymentService {
 
         return paymentRepository.findByCompanyCompanyIdOrderByCreatedAtDesc(companyId)
                 .stream()
+                .stream()
+                .filter(p -> matchPaymentState(p, paymentState))
+                .filter(p -> {
+                    if (studentOrgName == null || studentOrgName.isBlank()) return true;
+                    StudentOrg org = p.getStudentOrg();
+                    return org != null &&
+                            org.getOrganizationName().contains(studentOrgName);
+                })
                 .map(this::convertToPaymentListResponse)
                 .collect(Collectors.toList());
     }
@@ -72,12 +107,23 @@ public class PaymentService {
      * 1-2. 학생단체별 결제 내역 조회
      */
     @Transactional(readOnly = true)
-    public List<PaymentDto.PaymentListResponse> getPaymentsByStudentOrg(Long studentOrgId) {
+    public List<PaymentDto.PaymentListResponse> getPaymentsByStudentOrg(
+            Long studentOrgId,
+            String paymentState,
+            String companyName
+    ) {
         studentOrgRepository.findById(studentOrgId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
         return paymentRepository.findByStudentOrgStudentOrgIdOrderByCreatedAtDesc(studentOrgId)
                 .stream()
+                .filter(p -> matchPaymentState(p, paymentState))
+                .filter(p -> {
+                    if (companyName == null || companyName.isBlank()) return true;
+                    Company company = p.getCompany();
+                    return company != null &&
+                            company.getCompanyName().contains(companyName);
+                })
                 .map(this::convertToPaymentListResponse)
                 .collect(Collectors.toList());
     }
