@@ -51,7 +51,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         select new com.uniConnect.shop.dto.CompanyProductListResponse(
             c.companyId,
             c.brandName,
-            i.industryName,
+            i.name,
             p.productId,
             p.name,
             p.price,
@@ -72,7 +72,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         select new com.uniConnect.shop.dto.ProductDetailResponse(
             c.companyId,
             c.brandName,
-            i.industryName,
+            i.name,
             p.productId,
             p.name,
             p.price,
