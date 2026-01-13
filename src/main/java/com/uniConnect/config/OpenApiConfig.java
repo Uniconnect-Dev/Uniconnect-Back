@@ -32,7 +32,7 @@ public class OpenApiConfig {
 
         return new OpenAPI()
                 .addServersItem(new Server()
-                        .url("http://ec2-3-36-92-235.ap-northeast-2.compute.amazonaws.com")
+                        .url("https://api-uniconnect.duckdns.org/")
                         .description("Production Server")
                 )
                 .addServersItem(new Server()
