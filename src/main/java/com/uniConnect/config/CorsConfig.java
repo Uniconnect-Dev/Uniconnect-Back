@@ -18,7 +18,8 @@ public class CorsConfig {
                 "http://localhost:8080",
                 "http://10.0.2.2:8080",
                 "http://uniconnect.swagger.s3-website.ap-northeast-2.amazonaws.com", //안올려도 됐었음
-                "http://uniconnect-250909.s3-website.ap-northeast-2.amazonaws.com"
+                "http://uniconnect-250909.s3-website.ap-northeast-2.amazonaws.com",
+                "https://uniconnectcontact.vercel.app/"
         ));
         config.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
