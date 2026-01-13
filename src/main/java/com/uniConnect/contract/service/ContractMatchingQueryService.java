@@ -87,6 +87,7 @@ public class ContractMatchingQueryService {
     ) {
         return getMyMatchingsForCompanyRaw()
                 .stream()
+                .filter(m -> filterByName(m, filter))
                 .filter(m -> filterByPeriod(m, filter))
                 .filter(m -> filterByDate(m, filter))
                 .filter(m -> filterByCollaborationType(m, filter))
@@ -106,6 +107,7 @@ public class ContractMatchingQueryService {
     ) {
         return getMyMatchingsForStudentOrgRaw()
                 .stream()
+                .filter(m -> filterByName(m, filter))
                 .filter(m -> filterByPeriod(m, filter))
                 .filter(m -> filterByDate(m, filter))
                 .filter(m -> filterByCollaborationType(m, filter))
@@ -170,6 +172,25 @@ public class ContractMatchingQueryService {
             case "ALWAYS" -> true;
             default -> true;
         };
+    }
+
+    private boolean filterByName(CollaborationMatchRequest m, MatchingFilterRequest f) {
+        if (f.getKeyword() == null || f.getKeyword().isBlank()) return true;
+
+        String keyword = f.getKeyword().trim();
+
+        String studentOrgName =
+                m.getStudentOrg() != null
+                        ? m.getStudentOrg().getOrganizationName()
+                        : "";
+
+        String companyName =
+                m.getCompany() != null
+                        ? m.getCompany().getCompanyName()
+                        : "";
+
+        return studentOrgName.contains(keyword)
+                || companyName.contains(keyword);
     }
 
     private boolean filterByPeriod(CollaborationMatchRequest m, MatchingFilterRequest f) {
