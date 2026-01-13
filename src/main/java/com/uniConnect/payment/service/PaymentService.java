@@ -89,16 +89,19 @@ public class PaymentService {
 
         log.info("[결제 내역 조회] Company ID: {}", companyId);
 
-        return paymentRepository.findByCompanyCompanyIdOrderByCreatedAtDesc(companyId)
+        return paymentRepository
+                .findByCompanyCompanyIdOrderByCreatedAtDesc(companyId)
                 .stream()
-                .stream()
+
                 .filter(p -> matchPaymentState(p, paymentState))
+
                 .filter(p -> {
                     if (studentOrgName == null || studentOrgName.isBlank()) return true;
                     StudentOrg org = p.getStudentOrg();
                     return org != null &&
                             org.getOrganizationName().contains(studentOrgName);
                 })
+
                 .map(this::convertToPaymentListResponse)
                 .collect(Collectors.toList());
     }
@@ -117,12 +120,14 @@ public class PaymentService {
 
         return paymentRepository.findByStudentOrgStudentOrgIdOrderByCreatedAtDesc(studentOrgId)
                 .stream()
+
                 .filter(p -> matchPaymentState(p, paymentState))
+
                 .filter(p -> {
                     if (companyName == null || companyName.isBlank()) return true;
                     Company company = p.getCompany();
                     return company != null &&
-                            company.getCompanyName().contains(companyName);
+                            company.getBrandName().contains(companyName);
                 })
                 .map(this::convertToPaymentListResponse)
                 .collect(Collectors.toList());

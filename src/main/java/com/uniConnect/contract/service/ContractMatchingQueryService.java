@@ -186,7 +186,7 @@ public class ContractMatchingQueryService {
 
         String companyName =
                 m.getCompany() != null
-                        ? m.getCompany().getCompanyName()
+                        ? m.getCompany().getBrandName()
                         : "";
 
         return studentOrgName.contains(keyword)
