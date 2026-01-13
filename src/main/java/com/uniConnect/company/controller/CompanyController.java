@@ -1,7 +1,7 @@
 package com.uniConnect.company.controller;
 
-import com.uniConnect.company.dto.response.CompanyCardResponse;
-import com.uniConnect.company.dto.response.CompanyDetailResponse;
+import com.uniConnect.company.dto.CompanyCardResponse;
+import com.uniConnect.company.dto.CompanyDetailResponse;
 import com.uniConnect.company.service.CompanyQueryService;
 import com.uniConnect.global.response.ApiResponse;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

@@ -44,7 +44,7 @@ public class StudentOrgProfileService {
                 .build();
 
         // 관계 설정 (1:N)
-        studentOrg.getUsers().add(user);
+        studentOrg.addUser(user);
         user.setStudentOrg(studentOrg);
 
         StudentOrg saved = studentOrgRepository.save(studentOrg);

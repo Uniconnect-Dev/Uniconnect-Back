@@ -1,7 +1,7 @@
 package com.uniConnect.company.service;
 
-import com.uniConnect.company.dto.response.CompanyCardResponse;
-import com.uniConnect.company.dto.response.CompanyDetailResponse;
+import com.uniConnect.company.dto.CompanyCardResponse;
+import com.uniConnect.company.dto.CompanyDetailResponse;
 import com.uniConnect.company.entity.Company;
 import com.uniConnect.company.entity.CompanyProfile;
 import com.uniConnect.company.repository.CompanyProfileRepository;
@@ -45,7 +45,7 @@ public class CompanyQueryService {
                     .logoUrl(company.getLogoUrl())
                     .shortDescription(shortDesc)
                     .industryName(
-                            company.getIndustry() != null ? company.getIndustry().getIndustryName() : null
+                            company.getIndustry() != null ? company.getIndustry().getName() : null
                     )
                     .used(false)
                     .build();
@@ -68,7 +68,7 @@ public class CompanyQueryService {
                 .description(profile != null ? profile.getDescription() : null)
                 .website(profile != null ? profile.getWebsite() : null)
                 .snsUrl(profile != null ? profile.getSnsUrl() : null)
-                .industryName(company.getIndustry() != null ? company.getIndustry().getIndustryName() : null)
+                .industryName(company.getIndustry() != null ? company.getIndustry().getName() : null)
                 .build();
     }
 }

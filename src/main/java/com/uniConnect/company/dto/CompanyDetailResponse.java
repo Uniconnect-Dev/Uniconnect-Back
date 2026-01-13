@@ -1,4 +1,4 @@
-package com.uniConnect.company.dto.response;
+package com.uniConnect.company.dto;
 
 import lombok.Builder;
 import lombok.Getter;

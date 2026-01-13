@@ -54,8 +54,9 @@ public class StudentOrg {
     private CollaborationType collaborationType;
 
     // relation
+    @Builder.Default
     @OneToMany(mappedBy = "studentOrg", cascade = CascadeType.ALL)
-    private List<User> users = new ArrayList<>();
+    private List<User> users= new ArrayList<>();
 
     @OneToMany(mappedBy = "studentOrg", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StudentOrgKeyword> keywords;
@@ -69,9 +70,38 @@ public class StudentOrg {
     @OneToMany(mappedBy = "studentOrg", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<StudentOrgHistory> histories;
 
+    @PostLoad
+    public void postLoad() {
+        if (this.users == null) {
+            this.users = new ArrayList<>();
+        }
+        if (this.keywords == null) {
+            this.keywords = new ArrayList<>();
+        }
+        if (this.availabilities == null) {
+            this.availabilities = new ArrayList<>();
+        }
+        if (this.contacts == null) {
+            this.contacts = new ArrayList<>();
+        }
+        if (this.histories == null) {
+            this.histories = new ArrayList<>();
+        }
+    }
+
     public boolean hasUser(Long userId) {
         if (userId == null) return false;
+        if (this.users == null) return false;
         return users.stream()
                 .anyMatch(u -> u.getUserId().equals(userId));
+    }
+
+    // users 추가 헬퍼 메서드
+    public void addUser(User user) {
+        if (this.users == null) {
+            this.users = new ArrayList<>();
+        }
+        user.setStudentOrg(this);
+        this.users.add(user);
     }
 }
