@@ -52,7 +52,9 @@ public enum IndustryType {
     FINANCIAL_SERVICE("금융 서비스업"),
     FINTECH_SERVICE("핀테크 서비스업"),
     PAYMENT_SERVICE("결제 서비스업"),
-    DATA_FINANCE("데이터 금융업");
+    DATA_FINANCE("데이터 금융업"),
+    FNB("F&B"),
+    BEAUTY("뷰티");
 
     private final String displayName;
 
