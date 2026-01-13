@@ -24,6 +24,7 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequ
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.util.matcher.*;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.Set;
 
@@ -37,6 +38,7 @@ public class SecurityConfig {
     private final OAuth2FailureHandler failureHandler;
     private final AuthenticationConfiguration authenticationConfiguration;
     private final ClientRegistrationRepository clientRegistrationRepository;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
     @Order(1)
@@ -66,6 +68,7 @@ public class SecurityConfig {
         };
 
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(csrf -> csrf.disable())
             // ⭐ OAuth2 관련 경로만 매칭
             .securityMatcher("/login", "/logout", "/oauth2/**", "/login/oauth2/**", "/", "/error")
@@ -156,7 +159,7 @@ private void addExpiredCookie(jakarta.servlet.http.HttpServletResponse res, Stri
         http
                 .securityMatcher(apiMatcher)
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {}) // 필요 시 CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth ->
                 auth.requestMatchers(
@@ -206,6 +209,7 @@ private void addExpiredCookie(jakarta.servlet.http.HttpServletResponse res, Stri
                 // 캐치올
                 .securityMatcher("/**")
                 .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 
                 // 화이트리스트 전역 허용(정적/스웨거 등). 나머지는 모두 인증 필요
