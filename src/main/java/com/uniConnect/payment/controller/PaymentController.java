@@ -36,8 +36,17 @@ public class PaymentController {
     @Operation(summary = "기업의 결제 내역 조회")
     public ResponseEntity<List<PaymentDto.PaymentListResponse>> getPaymentsByCompany(
             @Parameter(description = "기업 ID", example = "1")
-            @PathVariable Long companyId) {
-        return ResponseEntity.ok(paymentService.getPayments(companyId));
+            @PathVariable Long companyId,
+
+            @RequestParam(required = false)
+            String paymentState,   // PENDING / COMPLETED
+
+            @RequestParam(required = false)
+            String studentOrgName
+    ) {
+        return ResponseEntity.ok(
+                paymentService.getPayments(companyId, paymentState, studentOrgName)
+        );
     }
 
     /**
@@ -47,8 +56,20 @@ public class PaymentController {
     @Operation(summary = "학생단체의 결제 내역 조회")
     public ResponseEntity<List<PaymentDto.PaymentListResponse>> getPaymentsByStudentOrg(
             @Parameter(description = "학생단체 ID", example = "1")
-            @PathVariable Long studentOrgId) {
-        return ResponseEntity.ok(paymentService.getPaymentsByStudentOrg(studentOrgId));
+            @PathVariable Long studentOrgId,
+            @RequestParam(required = false)
+            String paymentState,
+
+            @RequestParam(required = false)
+            String companyName
+    ) {
+        return ResponseEntity.ok(
+                paymentService.getPaymentsByStudentOrg(
+                        studentOrgId,
+                        paymentState,
+                        companyName
+                )
+        );
     }
 
     // ===== 2. 결제 수단 관리(기업, 학생단체) =====
