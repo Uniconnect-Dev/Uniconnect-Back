@@ -149,12 +149,18 @@ public class ContractMatchingQueryService {
                         .map(Contract::getStatus)
                         .orElse(ContractStatus.PendingSignature);
 
+        // 매칭 상대 회사명 안전하게 조회
+        Company company = resolveCompany(match);
+        String companyName = company != null ? company.getBrandName() : null;
+
+
         return MyMatchingListItemDto.of(
                 match.getId(),
                 match.getRespondedAt(),
                 match.getStudentOrg().getOrganizationName(),
                 match.getCollaborationType(),
-                contractStatus
+                contractStatus,
+                match.getCompany().getBrandName()
         );
     }
 
@@ -184,9 +190,11 @@ public class ContractMatchingQueryService {
                         ? m.getStudentOrg().getOrganizationName()
                         : "";
 
+        // 회사명도 resolveCompany()로 일관되게 조회
+        Company company = resolveCompany(m);
         String companyName =
-                m.getCompany() != null
-                        ? m.getCompany().getBrandName()
+                company != null
+                        ? company.getBrandName()
                         : "";
 
         return studentOrgName.contains(keyword)
@@ -295,5 +303,25 @@ public class ContractMatchingQueryService {
 
         return companyRepository.findByUsers_UserId(userId)
                 .orElseThrow(() -> new IllegalStateException("소속 기업이 없습니다."));
+    }
+
+    private Company resolveCompany(CollaborationMatchRequest match) {
+        // CollaborationMatchRequest.getCompany()는
+        // - 직접 company
+        // - samplingProposal.creator.company
+        // - collaborationProposal.company
+        // 까지 처리해주므로 우선 사용
+        Company company = match.getCompany();
+        if (company != null) {
+            return company;
+        }
+
+        // 필요 시 campaign 쪽에 company가 연결돼 있다면 여기에서 추가로 처리 가능
+        // (현재 도메인 구조에 따라 선택)
+        // if (match.getCampaign() != null && match.getCampaign().getCompany() != null) {
+        //     return match.getCampaign().getCompany();
+        // }
+
+        return null;
     }
 }

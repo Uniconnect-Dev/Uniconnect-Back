@@ -16,19 +16,22 @@ public class MyMatchingListItemDto {
     private String studentOrgName;
     private CollaborationType collaborationType;
     private String contractStatus; // "서명 전" / "계약 완료"
+    private String companyName;
 
     public static MyMatchingListItemDto of(
             Long matchRequestId,
             LocalDateTime matchedAt,
             String studentOrgName,
             CollaborationType collaborationType,
-            ContractStatus contractStatus
+            ContractStatus contractStatus,
+            String companyName
     ) {
         return MyMatchingListItemDto.builder()
                 .matchRequestId(matchRequestId)
                 .matchedAt(matchedAt)
                 .studentOrgName(studentOrgName)
                 .collaborationType(collaborationType)
+                .companyName(companyName)
                 .contractStatus(
                         contractStatus == ContractStatus.Signed
                                 ? "계약 완료"
